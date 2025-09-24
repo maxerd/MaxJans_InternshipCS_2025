@@ -364,10 +364,10 @@ figure(baseFig_sim+305);clf
     xStep = inf;
 
 % Run the predictions and plot them
-    sysID_predTests_V3
+    OLsim_sysID_predTests_V3
 
 % Run the residual tests and plot them
-    sysID_resTests_V3
+    OLsim_sysID_resTests_V3
 
 
 %% Frequency domain identification
