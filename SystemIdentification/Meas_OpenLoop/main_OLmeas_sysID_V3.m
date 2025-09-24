@@ -156,45 +156,59 @@ sysID.data.CL.full.tVec  = datCL.tVec;
     set(gcf,'position',[500 100 900 500])
     sgtitle(['Heater to TM temperature, open loop identification using unfiltered and filtered data, ',num2str(tMeas),' hours'])
         subplot(221)
-            simpleBodemag(sysID.nonPar.trd.OL.raw,'Hz',lw);hold on;grid minor
-            simpleBodemag(sysID.nonPar.lpm.OL.raw,'Hz',lw);grid minor
+            simpleBodemag(sysID.nonPar.trd.OL.raw,'Hz',lw);hold on;grid on
+            simpleBodemag(sysID.nonPar.lpm.OL.raw,'Hz',lw);grid on
             xlim([1e-4 0.01])
                 title(['Using unfiltered data'])
-                legend('Traditional','LPM','Model','location','best')
+                legend('Traditional','LPM','location','best')
         subplot(223)
-            simpleBodephase(sysID.nonPar.trd.OL.raw,'Hz',lw,'wrap');hold on;grid minor
-            simpleBodephase(sysID.nonPar.lpm.OL.raw,'Hz',lw,'wrap');grid minor
+            simpleBodephase(sysID.nonPar.trd.OL.raw,'Hz',lw,'wrap');hold on;grid on
+            simpleBodephase(sysID.nonPar.lpm.OL.raw,'Hz',lw,'wrap');grid on
             xlim([1e-4 0.01])
-                legend('Traditional','LPM','Model','location','best')
+                legend('Traditional','LPM','location','best')
         subplot(222)
-            simpleBodemag(sysID.nonPar.trd.OL.filt,'Hz',lw);hold on;grid minor
-            simpleBodemag(sysID.nonPar.lpm.OL.filt,'Hz',lw);grid minor
+            simpleBodemag(sysID.nonPar.trd.OL.filt,'Hz',lw);hold on;grid on
+            simpleBodemag(sysID.nonPar.lpm.OL.filt,'Hz',lw);grid on
             xlim([1e-4 0.01])
                 title(['Using filtered data'])
-                legend('Traditional','LPM','Model','location','best')
+                legend('Traditional','LPM','location','best')
         subplot(224)
-            simpleBodephase(sysID.nonPar.trd.OL.filt,'Hz',lw,'wrap');hold on;grid minor
-            simpleBodephase(sysID.nonPar.lpm.OL.filt,'Hz',lw,'wrap');grid minor
+            simpleBodephase(sysID.nonPar.trd.OL.filt,'Hz',lw,'wrap');hold on;grid on
+            simpleBodephase(sysID.nonPar.lpm.OL.filt,'Hz',lw,'wrap');grid on
             xlim([1e-4 0.01])
-                legend('Traditional','LPM','Model','location','best')
+                legend('Traditional','LPM','location','best')
 
 %% First order parametric approximation, using time data
     sysID.par.firstAprrox.OL.raw  = step_sysID(sysID.data.OL.full.in',zeros(size(sysID.data.OL.full.in))',sysID.data.OL.full.out,sysID.data.OL.full.tVec,10000*fs);
     sysID.par.firstAprrox.OL.filt = step_sysID(sysID.dataFilt.OL.full.in',zeros(size(sysID.dataFilt.OL.full.in))',sysID.dataFilt.OL.full.out',sysID.data.OL.full.tVec,10000*fs);
 
 %% Visualization of the first order approximation
+% figure(baseFig_sim+203);clf
+%     bode(sysID.par.firstAprrox.OL.raw,sysID.par.firstAprrox.OL.filt,opt);grid minor
+%     xlim([1e-5 0.1])
+%         xlabel('Frequency [Hz]')
+%         ylabel('Magnitude [dB]')
+%         title(['Heater to thermal mass temperature, first order approximation, ',num2str(tMeas),' hours'])
+%         legend('Unfiltered data','Filtered data','Model')
+
+bodeRange = logspace(-6,-1,100);
+
 figure(baseFig_sim+203);clf
-    bode(sysID.par.firstAprrox.OL.raw,sysID.par.firstAprrox.OL.filt,opt);grid minor
-    xlim([1e-5 0.1])
-        xlabel('Frequency [Hz]')
-        ylabel('Magnitude [dB]')
-        title(['Heater to thermal mass temperature, first order approximation, ',num2str(tMeas),' hours'])
-        legend('Unfiltered data','Filtered data','Model')
+    set(gcf,'position',[500 100 900 500])
+    sgtitle(['Heater to thermal mass temperature, first order approximation, ',num2str(tMeas),' hours'])
+        subplot(211)
+            simpleBodemag(sysID.par.firstAprrox.OL.raw,'Hz',lw ,bodeRange);hold on;grid on
+            simpleBodemag(sysID.par.firstAprrox.OL.filt,'Hz',lw,bodeRange,'-.');grid on
+                legend('Gotten from unfiltered data','Gotten from filtered data','location','best')
+        subplot(212)
+            simpleBodephase(sysID.par.firstAprrox.OL.raw,'Hz',lw,'wrap' ,bodeRange);hold on;grid on
+            simpleBodephase(sysID.par.firstAprrox.OL.filt,'Hz',lw,'wrap',bodeRange,'-.');grid on
+                legend('Gotten from unfiltered data','Gotten from filtered data','location','best')
 
 %% Parametric system identification, using time data, pre-requisites
 
 % Definitions for identification
-    nx = 4; % Model order for fixed order identification
+    nx = 5; % Model order for fixed order identification
 
 % nx order initial system
     initA = sysID.par.firstAprrox.OL.raw.A.*eye(nx);
@@ -244,16 +258,16 @@ optSS_prd = ssestOptions('Focus','Prediction');
     sysID.par.fixedOrder.sim.OL.filt = ssest(OL_dat_filt,nx,optSS_sim);
         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): done'])
 
-% % All tested parametric identification options using OL data, using prediction focus
-%         disp('Open Loop identification using an initial system: in progress')
-%     sysID.par.initSys.sim.OL.raw  = ssest(OL_dat,init_sys,optSS_prd);
-%     sysID.par.initSys.sim.OL.filt = ssest(OL_dat_filt,init_sys,optSS_prd);
-%         disp('Open Loop identification using an initial system: done')
-% 
-%         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): in progress'])
-%     sysID.par.fixedOrder.sim.OL.raw  = ssest(OL_dat,nx,optSS_prd);
-%     sysID.par.fixedOrder.sim.OL.filt = ssest(OL_dat_filt,nx,optSS_prd);
-%         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): done'])
+% All tested parametric identification options using OL data, using prediction focus
+        disp('Open Loop identification using an initial system: in progress')
+    sysID.par.initSys.prd.OL.raw  = ssest(OL_dat,init_sys,optSS_prd);
+    sysID.par.initSys.prd.OL.filt = ssest(OL_dat_filt,init_sys,optSS_prd);
+        disp('Open Loop identification using an initial system: done')
+
+        disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): in progress'])
+    sysID.par.fixedOrder.prd.OL.raw  = ssest(OL_dat,nx,optSS_prd);
+    sysID.par.fixedOrder.prd.OL.filt = ssest(OL_dat_filt,nx,optSS_prd);
+        disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): done'])
 
 
         disp('Open Loop identification using the raw data: in progress')
@@ -262,44 +276,88 @@ optSS_prd = ssestOptions('Focus','Prediction');
         disp('Open Loop identification using the raw data: done')
 
 %% Visualize and compare the identifications in frequency domain
+bodeRange = logspace(-6,-1,1000);
 
 figure(baseFig_sim+301);clf
-    bode(sysID.par.initSys.sim.OL.raw,opt);hold on
-    bode(sysID.par.fixedOrder.sim.OL.raw,opt);hold on
-    bode(sysID.par.firstAprrox.OL.raw,opt);hold on
-    bode(sysID.par.straight.sim.OL.raw,opt);
-        title('Bode plots of identification using raw Open Loop data')
-        legend('InitSysIdent','Fixed order','First order approx','Straight data')
+    set(gcf,'position',[500 100 700 450])
+    sgtitle('Bode plots of identification using raw Open Loop data')
+        subplot(211)
+            simpleBodemag(sysID.par.initSys.sim.OL.raw   ,'Hz',lw,bodeRange);hold on;grid on
+            simpleBodemag(sysID.par.fixedOrder.sim.OL.raw,'Hz',lw,bodeRange);grid on
+            simpleBodemag(sysID.par.firstAprrox.OL.raw   ,'Hz',lw,bodeRange);grid on
+            simpleBodemag(sysID.par.straight.sim.OL.raw  ,'Hz',lw,bodeRange);grid on
+                legend('InitSysIdent','Fixed order','First order approx','Straight data','location','best')
+        subplot(212)
+            simpleBodephase(sysID.par.initSys.sim.OL.raw   ,'Hz',lw,bodeRange,'wrap');hold on;grid on
+            simpleBodephase(sysID.par.fixedOrder.sim.OL.raw,'Hz',lw,bodeRange,'wrap');grid on
+            simpleBodephase(sysID.par.firstAprrox.OL.raw   ,'Hz',lw,bodeRange,'wrap');grid on
+            simpleBodephase(sysID.par.straight.sim.OL.raw  ,'Hz',lw,bodeRange,'wrap');grid on
+                legend('InitSysIdent','Fixed order','First order approx','Straight data','location','best')
 
 figure(baseFig_sim+302);clf
-    bode(sysID.par.initSys.sim.OL.filt,opt);hold on
-    bode(sysID.par.fixedOrder.sim.OL.filt,opt);hold on
-    bode(sysID.par.firstAprrox.OL.filt,opt);hold on
-    bode(sysID.par.straight.sim.OL.filt,opt);
-        title('Bode plots of identification using filtered Open Loop data')
-        legend('InitSysIdent','Fixed order','First order approx','Straight data')
+    set(gcf,'position',[500 100 700 450])
+    sgtitle('Bode plots of identification using filtered Open Loop data')
+        subplot(211)
+            simpleBodemag(sysID.par.initSys.sim.OL.filt   ,'Hz',lw,bodeRange);hold on;grid on
+            simpleBodemag(sysID.par.fixedOrder.sim.OL.filt,'Hz',lw,bodeRange);grid on
+            simpleBodemag(sysID.par.firstAprrox.OL.filt   ,'Hz',lw,bodeRange);grid on
+            simpleBodemag(sysID.par.straight.sim.OL.filt  ,'Hz',lw,bodeRange);grid on
+                legend('InitSysIdent','Fixed order','First order approx','Straight data','Model','location','best')
+        subplot(212)
+            simpleBodephase(sysID.par.initSys.sim.OL.filt   ,'Hz',lw,bodeRange,'wrap');hold on;grid on
+            simpleBodephase(sysID.par.fixedOrder.sim.OL.filt,'Hz',lw,bodeRange,'wrap');grid on
+            simpleBodephase(sysID.par.firstAprrox.OL.filt   ,'Hz',lw,bodeRange,'wrap');grid on
+            simpleBodephase(sysID.par.straight.sim.OL.filt  ,'Hz',lw,bodeRange,'wrap');grid on
+                legend('InitSysIdent','Fixed order','First order approx','Straight data','location','best')
 
-figure(baseFig_sim+305);clf
-    subplot(221)
-        bode(sysID.par.initSys.sim.OL.raw,opt);hold on
-        bode(sysID.par.initSys.sim.OL.filt,opt);hold on
-            title('Initial system')
-            legend('Raw','Filtered')
-    subplot(222)
-        bode(sysID.par.fixedOrder.sim.OL.raw,opt);hold on
-        bode(sysID.par.fixedOrder.sim.OL.filt,opt);hold on
-            title(['Fixed order, nx=',num2str(nx)])
-            legend('Raw','Filtered')
-    subplot(223)
-        bode(sysID.par.firstAprrox.OL.raw,opt);hold on
-        bode(sysID.par.firstAprrox.OL.filt,opt);hold on
-            title('First order approximation')
-            legend('Raw','Filtered')
-    subplot(224)
-        bode(sysID.par.straight.sim.OL.raw,opt);hold on
-        bode(sysID.par.straight.sim.OL.filt,opt);hold on
-            title('Straight data')
-            legend('Raw','Filtered')
+figure(baseFig_sim+304);clf
+    set(gcf,'position',[100 60 1400 450])
+    sgtitle('Bode plots of identification using filtered Open Loop data')
+        subplot(241)
+            simpleBodemag(sysID.par.initSys.sim.OL.raw ,'Hz',lw,bodeRange);hold on;grid on
+            simpleBodemag(sysID.par.initSys.sim.OL.filt,'Hz',lw,bodeRange);grid on
+            xlim([bodeRange(1) bodeRange(end)])
+                title('Initial system')
+                legend('Using raw data','Using filtered data','location','best')
+        subplot(245)
+            simpleBodephase(sysID.par.initSys.sim.OL.raw ,'Hz',lw,bodeRange,'wrap');hold on;grid on
+            simpleBodephase(sysID.par.initSys.sim.OL.filt,'Hz',lw,bodeRange,'wrap');grid on
+            xlim([bodeRange(1) bodeRange(end)])
+                legend('Using raw data','Using filtered data','location','best')
+        subplot(242)
+            simpleBodemag(sysID.par.fixedOrder.sim.OL.raw ,'Hz',lw,bodeRange);hold on;grid on
+            simpleBodemag(sysID.par.fixedOrder.sim.OL.filt,'Hz',lw,bodeRange);grid on
+            xlim([bodeRange(1) bodeRange(end)])
+                title(['Fixed order, nx=',num2str(nx)])
+                legend('Using raw data','Using filtered data','location','best')
+        subplot(246)
+            simpleBodephase(sysID.par.fixedOrder.sim.OL.raw ,'Hz',lw,bodeRange,'wrap');hold on;grid on
+            simpleBodephase(sysID.par.fixedOrder.sim.OL.filt,'Hz',lw,bodeRange,'wrap');grid on
+            xlim([bodeRange(1) bodeRange(end)])
+                legend('Using raw data','Using filtered data','location','best')
+        subplot(243)
+            simpleBodemag(sysID.par.firstAprrox.OL.raw ,'Hz',lw,bodeRange);hold on;grid on
+            simpleBodemag(sysID.par.firstAprrox.OL.filt,'Hz',lw,bodeRange);grid on
+            xlim([bodeRange(1) bodeRange(end)])
+                title('First order approximation')
+                legend('Using raw data','Using filtered data','location','best')
+        subplot(247)
+            simpleBodephase(sysID.par.firstAprrox.OL.raw ,'Hz',lw,bodeRange,'wrap');hold on;grid on
+            simpleBodephase(sysID.par.firstAprrox.OL.filt,'Hz',lw,bodeRange,'wrap');grid on
+            xlim([bodeRange(1) bodeRange(end)])
+                legend('Using raw data','Using filtered data','location','best')
+        subplot(244)
+            simpleBodemag(sysID.par.straight.sim.OL.raw ,'Hz',lw,bodeRange);hold on;grid on
+            simpleBodemag(sysID.par.straight.sim.OL.filt,'Hz',lw,bodeRange);grid on
+            xlim([bodeRange(1) bodeRange(end)])
+                title('Straight data')
+                legend('Using raw data','Using filtered data','location','best')
+        subplot(248)
+            simpleBodephase(sysID.par.straight.sim.OL.raw ,'Hz',lw,bodeRange,'wrap');hold on;grid on
+            simpleBodephase(sysID.par.straight.sim.OL.filt,'Hz',lw,bodeRange,'wrap');grid on
+            xlim([bodeRange(1) bodeRange(end)])
+                legend('Using raw data','Using filtered data','location','best')
+
 
 %% Validate and compare the identifications in time domain, using x-step ahead prediction and a residual test
 
