@@ -20,7 +20,8 @@ opt.PhaseWrapping = 'on';
 opt.FreqUnits = 'Hz';
 
 %% Define some simulation variables
-fs = 1;     % [Hz]    Sampling frequency
+% fs = 1;     % [Hz]    Sampling frequency
+fs = 0.01;     % [Hz]    Sampling frequency
 Ts = 1/fs;  % [s]     Sampling time
 % tMeas = 20; % [hours] Measurement time
 tMeas = 8; % [hours] Measurement time
@@ -28,13 +29,8 @@ tMeas = 8; % [hours] Measurement time
 T0 = 23; % [degC] Inital Temperature
 Tamb = 23; % [degC] Ambient Temperature
 
-T_ref = 45; % [degC] Reference Temperature
-
 N = tMeas*3600*fs; % [-] Measurement samples
 tVec = linspace(fs,tMeas*3600,N); % [s] Time vector
-
-%% Define some controller variables
-controllerBW = 0.001; % [Hz] Controller bandwidth
 
 %% Define the noise on the signal
 v     = 0.15.*randn(N,1);
@@ -122,39 +118,24 @@ figure(baseFig_sim+101);clf
         ylabel('Temperature [degC]')
         title(['Thermal mass temperature, open loop identification, ',num2str(tMeas),' hours'])
 
-% figure(baseFig_sim+102);clf;hold on
-%     yline(45,'r--',LineWidth=lw)
-%     plot(tVec,y_CL(:,1),LineWidth=lw);grid minor
-%         xlabel('Time [s]')
-%         ylabel('Temperature [degC]')
-%         title(['Thermal mass temperature, closed loop identification, ',num2str(tMeas),' hours'])
-%         legend('Setpoint','Thermal mass temperature',Location='best')
-
 %% Define the in and output vector sizes
 
 % Define the range of the data that is used for identification and validation
 if removeTrans
     idx1_OL = 8*3600*fs;
-    idx1_CL = 1*3600*fs;
 else
     idx1_OL = 1;
-    idx1_CL = 1;
 end
 if makeValSet
     idx2_OL = N-(N-8*3600*fs)*0.2;
-    idx2_CL = N-(N-1*3600*fs)*0.2;
 else
     idx2_OL = N;
-    idx2_CL = N;
 end
 
 idxRange_OL_trns = 1:idx1_OL+1;
 idxRange_OL      = idx1_OL:idx2_OL;
-idxRange_OL_val  = (idx2_OL-1):N;
-
-% idxRange_CL_trns = 1:idx1_CL+1;
-% idxRange_CL      = idx1_CL:idx2_CL;
-% idxRange_CL_val  = (idx2_CL-1):N;
+% idxRange_OL_val  = (idx2_OL-1):N;
+idxRange_OL_val  = (idx1_OL):N;
 
 %% Define the in and output vectors, for easy and consistent use
 % Open loop
@@ -164,27 +145,16 @@ inputData_OL_trns  = dist(idxRange_OL_trns);
 outputData_OL = y_OL(idxRange_OL)-ambVec(idxRange_OL)';
 inputData_OL  = dist(idxRange_OL);
 
-outputData_OL_val = y_OL_val-ambVec';
-inputData_OL_val  = dist_val;
+outputData_OL_val = y_OL_val(idxRange_OL_val)-ambVec(idxRange_OL_val)';
+inputData_OL_val  = dist_val(idxRange_OL_val);
 
 outputData_OL_full = y_OL-ambVec';
 inputData_OL_full  = dist;
 
-% % Closed loop for traditional non-parametric
-% outputData_CL_trd = y_CL(idxRange_CL,2);
-% inputData_CL_trd  = dist(idxRange_CL);
-% 
-% % Closed loop for LPM non-parametric
-% outputData_CL_LPM = y_CL(idxRange_CL,1)-ambVec(idxRange_CL)';
-% inputData_CL_LPM  = dist(idxRange_CL);
-% 
-% outputData_CL_full = y_CL(:,1)-ambVec';
-% inputData_CL_full  = dist;
-
 % Define the time vectors
 tVec_OL_trns = tVec(idxRange_OL_trns);
 tVec_OL      = tVec(idxRange_OL);
-tVec_OL_val  = tVec;
+tVec_OL_val  = tVec(idxRange_OL_val);
 tVec_OL_full = tVec;
 
 % tVec_CL      = tVec(idxRange_CL);
@@ -210,21 +180,12 @@ tVec_OL_full = tVec;
     outputData_OL_full_filt = lsim(LPfilt,outputData_OL_full-outputData_OL_full(1),tVec_OL_full)'+outputData_OL_full(1);
     inputData_OL_full_filt = lsim(LPfilt,inputData_OL_full-inputData_OL_full(1),tVec_OL_full)'+inputData_OL_full(1);
     
-    % % Closed loop data
-    % outputData_CL_trd_filt = lsim(LPfilt,outputData_CL_trd-outputData_CL_trd(1),tVec_CL)'+outputData_CL_trd(1);
-    % inputData_CL_trd_filt = lsim(LPfilt,inputData_CL_trd-inputData_CL_trd(1),tVec_CL)'+inputData_CL_trd(1);
-    % 
-    % outputData_CL_LPM_filt = lsim(LPfilt,outputData_CL_LPM-outputData_CL_LPM(1),tVec_CL)'+outputData_CL_LPM(1);
-    % inputData_CL_LPM_filt = lsim(LPfilt,inputData_CL_LPM-inputData_CL_LPM(1),tVec_CL)'+inputData_CL_LPM(1);
-
 %% FRF measurements using the new state vector
 % Make the FRF's using the raw data
     [sysID.nonPar.trd.OL.raw, ~] = makeOpenLoopFRF_sysIdent(outputData_OL, inputData_OL(1,:), fs);
-    % [sysID.nonPar.trd.CL.raw, ~] = makeClosedLoopFRF(outputData_CL_trd, inputData_CL_trd(1,:), K.tot, fs);
 
 % Make the FRF's using the filtered data
     [sysID.nonPar.trd.OL.filt, ~] = makeOpenLoopFRF_sysIdent(outputData_OL_filt, inputData_OL_filt(1,:), fs);
-    % [sysID.nonPar.trd.CL.filt, ~] = makeClosedLoopFRF(outputData_CL_trd_filt, inputData_CL_trd_filt(1,:), K.tot, fs);
 
 % Define and do the non-parametric identification using the LPM, using both
 % OL and CL data
@@ -243,43 +204,24 @@ tVec_OL_full = tVec;
 %% Visualization of the non-parametric identification
 % Open loop data
     figure(baseFig_sim+201);clf
-        subplot(211)
+        subplot(121)
             bode(sysID.nonPar.trd.OL.raw,sysID.nonPar.lpm.OL.raw,G(1,1),'g--',opt);grid minor
-            xlim([1e-5 1])
+            xlim([1e-5 0.01])
                 xlabel('Frequency [Hz]')
                 ylabel('Magnitude [dB]')
                 title(['Heater to thermal mass temperature, open loop identification using raw data, ',num2str(tMeas),' hours'])
                 legend('Traditional','LPM','Model')
-        subplot(212)
+        subplot(122)
             bode(sysID.nonPar.trd.OL.filt,sysID.nonPar.lpm.OL.filt,G(1,1),'g--',opt);grid minor
-            xlim([1e-5 1])
+            xlim([1e-5 0.01])
                 xlabel('Frequency [Hz]')
                 ylabel('Magnitude [dB]')
                 title(['Heater to thermal mass temperature, open loop identification using filtered data, ',num2str(tMeas),' hours'])
                 legend('Traditional','LPM','Model')
 
-% % Closed loop data
-%     figure(baseFig_sim+202);clf
-%         subplot(211);
-%             bode(sysID.nonPar.trd.CL.raw,sysID.nonPar.lpm.CL.raw,G(1,1),'g--',opt);hold on;grid minor
-%             xline(controllerBW,'m--')
-%             xlim([1e-5 1])
-%                 xlabel('Frequency [Hz]')
-%                 ylabel('Magnitude [dB]')
-%                 title(['Heater to thermal mass temperature, closed loop identification using raw data, ',num2str(tMeas),' hours'])
-%                 legend('Traditional','LPM','Model','Controller bandwidth')
-%         subplot(212);
-%             bode(sysID.nonPar.trd.CL.filt,sysID.nonPar.lpm.CL.filt,G(1,1),'g--',opt);hold on;grid minor
-%             xline(controllerBW,'m--')
-%             xlim([1e-5 1])
-%                 xlabel('Frequency [Hz]')
-%                 ylabel('Magnitude [dB]')
-%                 title(['Heater to thermal mass temperature, closed loop identification using filtered data, ',num2str(tMeas),' hours'])
-%                 legend('Traditional','LPM','Model','Controller bandwidth')
-
 %% First order parametric approximation, using time data
-    sysID.par.firstAprrox.OL.raw  = step_sysID(inputData_OL_full',zeros(size(inputData_OL_full))',outputData_OL_full,tVec_OL_full,10000*Ts);
-    sysID.par.firstAprrox.OL.filt = step_sysID(inputData_OL_full_filt',zeros(size(inputData_OL_full_filt))',outputData_OL_full_filt',tVec_OL_full,10000*Ts);
+    sysID.par.firstAprrox.OL.raw  = step_sysID(inputData_OL_full',zeros(size(inputData_OL_full))',outputData_OL_full,tVec_OL_full,10000*fs);
+    sysID.par.firstAprrox.OL.filt = step_sysID(inputData_OL_full_filt',zeros(size(inputData_OL_full_filt))',outputData_OL_full_filt',tVec_OL_full,10000*fs);
 
 %% Visualization of the first order approximation
 figure(baseFig_sim+203);clf
@@ -309,8 +251,6 @@ figure(baseFig_sim+203);clf
 % Define the data as iddata's
     OL_dat      = iddata(outputData_OL          ,inputData_OL(:,:)'    ,Ts);
     OL_dat_filt = iddata(outputData_OL_filt'    ,inputData_OL_filt'    ,Ts);
-    % CL_dat      = iddata(outputData_CL_LPM      ,inputData_CL_LPM(:,:)',Ts);
-    % CL_dat_filt = iddata(outputData_CL_LPM_filt',inputData_CL_LPM_filt',Ts);
 
 % Define the data that is not used in the identification as validation data
 
@@ -334,69 +274,33 @@ optSS_prd = ssestOptions('Focus','Prediction');
 
 %% Parametric system identification, using time data
 
-% % All tested parametric identification options using OL data, using simulation focus
-%         disp('Open Loop identification using an initial system: in progress')
-%     sysID.par.initSys.sim.OL.raw  = ssest(OL_dat,init_sys,optSS_sim);
-%     sysID.par.initSys.sim.OL.filt = ssest(OL_dat_filt,init_sys,optSS_sim);
-%         disp('Open Loop identification using an initial system: done')
-% 
-%         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): in progress'])
-%     sysID.par.fixedOrder.sim.OL.raw  = ssest(OL_dat,nx,optSS_sim);
-%     sysID.par.fixedOrder.sim.OL.filt = ssest(OL_dat_filt,nx,optSS_sim);
-%         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): done'])
-% 
-%         disp('Open Loop identification using the raw data: in progress')
-%     sysID.par.straight.sim.OL.raw  = ssest(OL_dat);
-%     sysID.par.straight.sim.OL.filt = ssest(OL_dat_filt);
-%         disp('Open Loop identification using the raw data: done')
-% 
-% % All tested parametric identification options using CL data, using simulation focus
-%         disp('Closed Loop identification using an initial system: in progress')
-%     sysID.par.initSys.sim.CL.raw  = ssest(CL_dat,init_sys,optSS_sim);
-%     sysID.par.initSys.sim.CL.filt = ssest(CL_dat_filt,init_sys,optSS_sim);
-%         disp('Closed Loop identification using an initial system: done')
-% 
-%         disp(['Closed Loop identification using a fixed order (nx=',num2str(nx),'): in progress'])
-%     sysID.par.fixedOrder.sim.CL.raw  = ssest(CL_dat,nx,optSS_sim);
-%     sysID.par.fixedOrder.sim.CL.filt = ssest(CL_dat_filt,nx,optSS_sim);
-%         disp(['Closed Loop identification using a fixed order (nx=',num2str(nx),'): done'])
-% 
-%         disp('Closed Loop identification using filtered data: in progress')
-%     sysID.par.straight.sim.CL.raw  = ssest(CL_dat);
-%     sysID.par.straight.sim.CL.filt = ssest(CL_dat_filt);
-%         disp('Closed Loop identification using filtered data: done')
-
 % All tested parametric identification options using OL data, using prediction focus
         disp('Open Loop identification using an initial system: in progress')
-    sysID.par.initSys.sim.OL.raw  = ssest(OL_dat,init_sys,optSS_prd);
-    sysID.par.initSys.sim.OL.filt = ssest(OL_dat_filt,init_sys,optSS_prd);
+    sysID.par.initSys.sim.OL.raw  = ssest(OL_dat,init_sys,optSS_sim);
+    sysID.par.initSys.sim.OL.filt = ssest(OL_dat_filt,init_sys,optSS_sim);
         disp('Open Loop identification using an initial system: done')
 
         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): in progress'])
-    sysID.par.fixedOrder.sim.OL.raw  = ssest(OL_dat,nx,optSS_prd);
-    sysID.par.fixedOrder.sim.OL.filt = ssest(OL_dat_filt,nx,optSS_prd);
+    sysID.par.fixedOrder.sim.OL.raw  = ssest(OL_dat,nx,optSS_sim);
+    sysID.par.fixedOrder.sim.OL.filt = ssest(OL_dat_filt,nx,optSS_sim);
         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): done'])
+
+% % All tested parametric identification options using OL data, using prediction focus
+%         disp('Open Loop identification using an initial system: in progress')
+%     sysID.par.initSys.sim.OL.raw  = ssest(OL_dat,init_sys,optSS_prd);
+%     sysID.par.initSys.sim.OL.filt = ssest(OL_dat_filt,init_sys,optSS_prd);
+%         disp('Open Loop identification using an initial system: done')
+% 
+%         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): in progress'])
+%     sysID.par.fixedOrder.sim.OL.raw  = ssest(OL_dat,nx,optSS_prd);
+%     sysID.par.fixedOrder.sim.OL.filt = ssest(OL_dat_filt,nx,optSS_prd);
+%         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): done'])
+
 
         disp('Open Loop identification using the raw data: in progress')
     sysID.par.straight.sim.OL.raw  = ssest(OL_dat);
     sysID.par.straight.sim.OL.filt = ssest(OL_dat_filt);
         disp('Open Loop identification using the raw data: done')
-
-% % All tested parametric identification options using CL data, using simulation focus
-%         disp('Closed Loop identification using an initial system: in progress')
-%     sysID.par.initSys.sim.CL.raw  = ssest(CL_dat,init_sys,optSS_prd);
-%     sysID.par.initSys.sim.CL.filt = ssest(CL_dat_filt,init_sys,optSS_prd);
-%         disp('Closed Loop identification using an initial system: done')
-% 
-%         disp(['Closed Loop identification using a fixed order (nx=',num2str(nx),'): in progress'])
-%     sysID.par.fixedOrder.sim.CL.raw  = ssest(CL_dat,nx,optSS_prd);
-%     sysID.par.fixedOrder.sim.CL.filt = ssest(CL_dat_filt,nx,optSS_prd);
-%         disp(['Closed Loop identification using a fixed order (nx=',num2str(nx),'): done'])
-% 
-%         disp('Closed Loop identification using filtered data: in progress')
-%     sysID.par.straight.sim.CL.raw  = ssest(CL_dat);
-%     sysID.par.straight.sim.CL.filt = ssest(CL_dat_filt);
-%         disp('Closed Loop identification using filtered data: done')
 
 %% Visualize and compare the identifications in frequency domain
 
@@ -417,23 +321,6 @@ figure(baseFig_sim+302);clf
     bode(sysTMC(32,3),'g--');grid minor
         title('Bode plots of identification using filtered Open Loop data')
         legend('InitSysIdent','Fixed order','First order approx','Straight data','Model')
-
-% figure(baseFig_sim+303);clf
-%     bode(sysID.par.initSys.sim.CL.raw,opt);hold on
-%     bode(sysID.par.fixedOrder.sim.CL.raw,opt)
-%     bode(sysID.par.straight.sim.CL.raw,opt);
-%     bode(sysTMC(32,3),'g--');grid minor
-%         title('Bode plots of identification using raw Closed Loop data')
-%         legend('InitSysIdent','Fixed order','Straight data','Model')
-% 
-% figure(baseFig_sim+304);clf
-%     bode(sysID.par.initSys.sim.CL.filt,opt);hold on
-%     bode(sysID.par.fixedOrder.sim.CL.filt,opt)
-%     bode(sysID.par.straight.sim.CL.filt,opt);
-%     bode(sysTMC(32,3),'g--');grid minor
-%         title('Bode plots of identification using filtered Closed Loop data')
-%         legend('InitSysIdent','Fixed order','Straight data','Model')
-
 
 figure(baseFig_sim+305);clf
     subplot(221)
@@ -492,10 +379,10 @@ OL_freqDat_lpm      = idfrd(squeeze(sysID.nonPar.lpm.OL.raw.ResponseData) ,sysID
 OL_freqDat_trd_filt = idfrd(squeeze(sysID.nonPar.trd.OL.filt.ResponseData),sysID.nonPar.trd.OL.filt.Frequency,1);
 OL_freqDat_lpm_filt = idfrd(squeeze(sysID.nonPar.lpm.OL.filt.ResponseData),sysID.nonPar.lpm.OL.filt.Frequency,1);
 
-sysID.par.freqTRD.sim.OL.raw = ssest(OL_freqDat_trd,nx_freq,optSS_sim);
-sysID.par.freqLPM.sim.OL.raw = ssest(OL_freqDat_lpm,nx_freq,optSS_sim);
-% sysID.par.freqTRD.sim.OL.raw  = ssest(OL_freqDat_trd     ,init_sys,optSS_sim);
-% sysID.par.freqLPM.sim.OL.raw  = ssest(OL_freqDat_lpm     ,init_sys,optSS_sim);
+% sysID.par.freqTRD.sim.OL.raw = ssest(OL_freqDat_trd,nx_freq,optSS_sim);
+% sysID.par.freqLPM.sim.OL.raw = ssest(OL_freqDat_lpm,nx_freq,optSS_sim);
+sysID.par.freqTRD.sim.OL.raw  = ssest(OL_freqDat_trd     ,init_sys,optSS_sim);
+sysID.par.freqLPM.sim.OL.raw  = ssest(OL_freqDat_lpm     ,init_sys,optSS_sim);
 % sysID.par.freqTRD.sim.OL.raw  = ssest(OL_freqDat_trd     ,sysID.par.fixedOrder.sim.OL.raw,optSS_sim);
 % sysID.par.freqLPM.sim.OL.raw  = ssest(OL_freqDat_lpm     ,sysID.par.fixedOrder.sim.OL.raw,optSS_sim);
 % sysID.par.freqTRD.sim.OL.filt = ssest(OL_freqDat_trd_filt,sysID.par.fixedOrder.sim.OL.raw,optSS_sim);

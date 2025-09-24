@@ -23,9 +23,6 @@ x0_H = datOut(1).*ones(1,1);
 % y_H   = lsim(H_ident,datIn,tVec,x0_H);
 y_H   = lsim(H_amb,[datIn datAmb]',tVec,x0_H);
 
-size(datOut)
-size(y_H')
-
 % figure(901);clf;hold on
 %     subplot(211);hold on;grid minor
 %         plot(tVec,datOut,'--',lineWidth=1.5)
@@ -35,7 +32,7 @@ size(y_H')
 %             title('Temperature of input data and simulation using identified model')
 %             legend('Input data','Simulation')
 %     subplot(212);hold on;grid minor
-%         plot(tVec,datOut-y_H')
+%         plot(tVec,datOut-y_H)
 %             xlabel('Time [s]')
 %             ylabel('Temperature difference [degC]')
 %             title('Difference between input data and simulation using identified model')
