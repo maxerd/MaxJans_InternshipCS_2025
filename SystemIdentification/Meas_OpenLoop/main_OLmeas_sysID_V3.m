@@ -35,12 +35,6 @@ disp('Loading in measurement data...')
     datCL = load(dataDir_CL);
 disp('Loading done!')
 
-%% Make the system used for data generation
-% The lumped TMC-setup, including water --> flow == 0 [ml/s]
-    % main_lumpedSystem_water_V3
-    % 
-    % G = sysTMC(32,[3 6])*5;
-
 %% Define some measurement variables for easier use
 fs = 1/dat.Ts;     % [Hz]    Sampling frequency
 Ts = dat.Ts;  % [s]     Sampling time
@@ -159,20 +153,30 @@ sysID.data.CL.full.tVec  = datCL.tVec;
 %% Visualization of the non-parametric identification
 % Open loop data
     figure(baseFig_sim+201);clf
-        subplot(121)
-            bode(sysID.nonPar.trd.OL.raw,sysID.nonPar.lpm.OL.raw,opt);grid minor
-            xlim([1e-5 1])
-                xlabel('Frequency [Hz]')
-                ylabel('Magnitude [dB]')
-                title(['Heater to thermal mass temperature, open loop identification using raw data, ',num2str(tMeas),' hours'])
-                legend('Traditional','LPM','Model')
-        subplot(122)
-            bode(sysID.nonPar.trd.OL.filt,sysID.nonPar.lpm.OL.filt,opt);grid minor
-            xlim([1e-5 1])
-                xlabel('Frequency [Hz]')
-                ylabel('Magnitude [dB]')
-                title(['Heater to thermal mass temperature, open loop identification using filtered data, ',num2str(tMeas),' hours'])
-                legend('Traditional','LPM','Model')
+    set(gcf,'position',[500 100 900 500])
+    sgtitle(['Heater to TM temperature, open loop identification using unfiltered and filtered data, ',num2str(tMeas),' hours'])
+        subplot(221)
+            simpleBodemag(sysID.nonPar.trd.OL.raw,'Hz',lw);hold on;grid minor
+            simpleBodemag(sysID.nonPar.lpm.OL.raw,'Hz',lw);grid minor
+            xlim([1e-4 0.01])
+                title(['Using unfiltered data'])
+                legend('Traditional','LPM','Model','location','best')
+        subplot(223)
+            simpleBodephase(sysID.nonPar.trd.OL.raw,'Hz',lw,'wrap');hold on;grid minor
+            simpleBodephase(sysID.nonPar.lpm.OL.raw,'Hz',lw,'wrap');grid minor
+            xlim([1e-4 0.01])
+                legend('Traditional','LPM','Model','location','best')
+        subplot(222)
+            simpleBodemag(sysID.nonPar.trd.OL.filt,'Hz',lw);hold on;grid minor
+            simpleBodemag(sysID.nonPar.lpm.OL.filt,'Hz',lw);grid minor
+            xlim([1e-4 0.01])
+                title(['Using filtered data'])
+                legend('Traditional','LPM','Model','location','best')
+        subplot(224)
+            simpleBodephase(sysID.nonPar.trd.OL.filt,'Hz',lw,'wrap');hold on;grid minor
+            simpleBodephase(sysID.nonPar.lpm.OL.filt,'Hz',lw,'wrap');grid minor
+            xlim([1e-4 0.01])
+                legend('Traditional','LPM','Model','location','best')
 
 %% First order parametric approximation, using time data
     sysID.par.firstAprrox.OL.raw  = step_sysID(sysID.data.OL.full.in',zeros(size(sysID.data.OL.full.in))',sysID.data.OL.full.out,sysID.data.OL.full.tVec,10000*fs);
