@@ -45,8 +45,8 @@ addpath(genpath(".\Funcs\"))
     saveController = false;
 
 % Define the (constant) water flow
-    % waterVelocity = 0; %[ml/s]
-    waterVelocity = ureal('waterVel',0.5,'PlusMinus',[-0.5 0.5]); %[ml/s]
+    waterVelocity = 0; %[ml/s]
+    % waterVelocity = ureal('waterVel',0.5,'PlusMinus',[-0.5 0.5]); %[ml/s]
 
 % Make LFR repesentation
     makeLFR = true; %[true/false]
