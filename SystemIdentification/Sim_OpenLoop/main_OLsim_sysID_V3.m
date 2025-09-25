@@ -134,23 +134,23 @@ idxRange_OL_val  = (idx1_OL):N;
 
 %% Define the in and output vectors, for easy and consistent use
 % Open loop
-outputData_OL_trns = y_OL(idxRange_OL_trns)-ambVec(idxRange_OL_trns)';
-inputData_OL_trns  = dist(idxRange_OL_trns);
+sysID.data.OL.trans.out = y_OL(idxRange_OL_trns)-ambVec(idxRange_OL_trns)';
+sysID.data.OL.trans.in  = dist(idxRange_OL_trns);
 
-outputData_OL = y_OL(idxRange_OL)-ambVec(idxRange_OL)';
-inputData_OL  = dist(idxRange_OL);
+sysID.data.OL.train.out = y_OL(idxRange_OL)-ambVec(idxRange_OL)';
+sysID.data.OL.train.in  = dist(idxRange_OL);
 
-outputData_OL_val = y_OL_val(idxRange_OL_val)-ambVec(idxRange_OL_val)';
-inputData_OL_val  = dist_val(idxRange_OL_val);
+sysID.data.OL.val.out   = y_OL_val(idxRange_OL_val)-ambVec(idxRange_OL_val)';
+sysID.data.OL.val.in    = dist_val(idxRange_OL_val);
 
-outputData_OL_full = y_OL-ambVec';
-inputData_OL_full  = dist;
+sysID.data.OL.full.out  = y_OL-ambVec';
+sysID.data.OL.full.in   = dist;
 
 % Define the time vectors
-tVec_OL_trns = tVec(idxRange_OL_trns);
-tVec_OL      = tVec(idxRange_OL);
-tVec_OL_val  = tVec(idxRange_OL_val);
-tVec_OL_full = tVec;
+sysID.data.OL.trans.tVec = tVec(idxRange_OL_trns);
+sysID.data.OL.train.tVec = tVec(idxRange_OL);
+sysID.data.OL.val.tVec   = tVec(idxRange_OL_val);
+sysID.data.OL.full.tVec  = tVec;
 
 % tVec_CL      = tVec(idxRange_CL);
 
@@ -163,24 +163,24 @@ tVec_OL_full = tVec;
 
 % Actually filter the data
     % Open loop data
-    outputData_OL_trns_filt = lsim(LPfilt,outputData_OL_trns-outputData_OL_trns(1),tVec_OL_trns)'+outputData_OL_trns(1);
-    inputData_OL_trns_filt = lsim(LPfilt,inputData_OL_trns-inputData_OL_trns(1),tVec_OL_trns)'+inputData_OL_trns(1);
+    sysID.dataFilt.OL.trans.out = lsim(LPfilt,sysID.data.OL.trans.out-sysID.data.OL.trans.out(1),sysID.data.OL.trans.tVec)'+sysID.data.OL.trans.out(1);
+    sysID.dataFilt.OL.trans.in = lsim(LPfilt,sysID.data.OL.trans.in-sysID.data.OL.trans.in(1),sysID.data.OL.trans.tVec)'+sysID.data.OL.trans.in(1);
 
-    outputData_OL_filt = lsim(LPfilt,outputData_OL-outputData_OL(1),tVec_OL)'+outputData_OL(1);
-    inputData_OL_filt = lsim(LPfilt,inputData_OL-inputData_OL(1),tVec_OL)'+inputData_OL(1);
+    sysID.dataFilt.OL.train.out = lsim(LPfilt,sysID.data.OL.train.out-sysID.data.OL.train.out(1),sysID.data.OL.train.tVec)'+sysID.data.OL.train.out(1);
+    sysID.dataFilt.OL.train.in = lsim(LPfilt,sysID.data.OL.train.in-sysID.data.OL.train.in(1),sysID.data.OL.train.tVec)'+sysID.data.OL.train.in(1);
 
-    outputData_OL_val_filt = lsim(LPfilt,outputData_OL_val-outputData_OL_val(1),tVec_OL_val)'+outputData_OL_val(1);
-    inputData_OL_val_filt = lsim(LPfilt,inputData_OL_val-inputData_OL_val(1),tVec_OL_val)'+inputData_OL_val(1);
+    sysID.dataFilt.OL.val.out = lsim(LPfilt,sysID.data.OL.val.out-sysID.data.OL.val.out(1),sysID.data.OL.val.tVec)'+sysID.data.OL.val.out(1);
+    sysID.dataFilt.OL.val.in = lsim(LPfilt,sysID.data.OL.val.in-sysID.data.OL.val.in(1),sysID.data.OL.val.tVec)'+sysID.data.OL.val.in(1);
 
-    outputData_OL_full_filt = lsim(LPfilt,outputData_OL_full-outputData_OL_full(1),tVec_OL_full)'+outputData_OL_full(1);
-    inputData_OL_full_filt = lsim(LPfilt,inputData_OL_full-inputData_OL_full(1),tVec_OL_full)'+inputData_OL_full(1);
+    sysID.dataFilt.OL.full.out = lsim(LPfilt,sysID.data.OL.full.out-sysID.data.OL.full.out(1),sysID.data.OL.full.tVec)'+sysID.data.OL.full.out(1);
+    sysID.dataFilt.OL.full.in = lsim(LPfilt,sysID.data.OL.full.in-sysID.data.OL.full.in(1),sysID.data.OL.full.tVec)'+sysID.data.OL.full.in(1);
     
 %% FRF measurements using the new state vector
 % Make the FRF's using the raw data
-    [sysID.nonPar.trd.OL.raw, ~] = makeOpenLoopFRF_sysIdent(outputData_OL, inputData_OL(1,:), fs);
+    [sysID.nonPar.trd.OL.raw, ~] = makeOpenLoopFRF_sysIdent(sysID.data.OL.train.out, sysID.data.OL.train.in(1,:), fs);
 
 % Make the FRF's using the filtered data
-    [sysID.nonPar.trd.OL.filt, ~] = makeOpenLoopFRF_sysIdent(outputData_OL_filt, inputData_OL_filt(1,:), fs);
+    [sysID.nonPar.trd.OL.filt, ~] = makeOpenLoopFRF_sysIdent(sysID.dataFilt.OL.train.out, sysID.dataFilt.OL.train.in(1,:), fs);
 
 % Define and do the non-parametric identification using the LPM, using both
 % OL and CL data
@@ -188,8 +188,8 @@ tVec_OL_full = tVec;
     locality  = 8; % Amount of points (pos & neg) to consider around apprx freq
     
         disp('Starting OL LPM identification')
-    [sysID.nonPar.lpm.OL.raw,~]  = sysID_LPM(outputData_OL     ,inputData_OL(1,:)     ,fs,locality,polyOrder);
-    [sysID.nonPar.lpm.OL.filt,~] = sysID_LPM(outputData_OL_filt,inputData_OL_filt(1,:),fs,locality,polyOrder);
+    [sysID.nonPar.lpm.OL.raw,~]  = sysID_LPM(sysID.data.OL.train.out     ,sysID.data.OL.train.in(1,:)     ,fs,locality,polyOrder);
+    [sysID.nonPar.lpm.OL.filt,~] = sysID_LPM(sysID.dataFilt.OL.train.out,sysID.dataFilt.OL.train.in(1,:),fs,locality,polyOrder);
         disp('Finished OL LPM identification')
     %     disp('Starting CL LPM identification')
     % [sysID.nonPar.lpm.CL.raw,~]  = sysID_LPM(outputData_CL_LPM     ,inputData_CL_LPM(1,:)     ,fs,locality,polyOrder);
@@ -229,8 +229,8 @@ tVec_OL_full = tVec;
                 legend('Traditional','LPM','Model','location','best')
 
 %% First order parametric approximation, using time data
-    sysID.par.firstAprrox.OL.raw  = step_sysID(inputData_OL_full',zeros(size(inputData_OL_full))',outputData_OL_full,tVec_OL_full,10000*fs);
-    sysID.par.firstAprrox.OL.filt = step_sysID(inputData_OL_full_filt',zeros(size(inputData_OL_full_filt))',outputData_OL_full_filt',tVec_OL_full,10000*fs);
+    sysID.par.firstAprrox.OL.raw  = step_sysID(sysID.data.OL.full.in',zeros(size(sysID.data.OL.full.in))',sysID.data.OL.full.out,sysID.data.OL.full.tVec,10000*fs);
+    sysID.par.firstAprrox.OL.filt = step_sysID(sysID.dataFilt.OL.full.in',zeros(size(sysID.dataFilt.OL.full.in))',sysID.dataFilt.OL.full.out',sysID.data.OL.full.tVec,10000*fs);
 
 %% Visualization of the first order approximation
 bodeRange = logspace(-6,-1,100);
@@ -266,24 +266,24 @@ figure(baseFig_sim+203);clf
     init_sys.Structure.K.Free = zeros(nx,1);
 
 % Define the data as iddata's
-    OL_dat      = iddata(outputData_OL          ,inputData_OL(:,:)'    ,Ts);
-    OL_dat_filt = iddata(outputData_OL_filt'    ,inputData_OL_filt'    ,Ts);
+    sysID.data.OL.train.id      = iddata(sysID.data.OL.train.out          ,sysID.data.OL.train.in(:,:)'    ,Ts);
+    sysID.dataFilt.OL.train.id = iddata(sysID.dataFilt.OL.train.out'    ,sysID.dataFilt.OL.train.in'    ,Ts);
 
 % Define the data that is not used in the identification as validation data
 
 if makeValSet
-    OL_dat_val      = iddata(outputData_OL_val      ,inputData_OL_val',Ts);
-    OL_dat_val_filt = iddata(outputData_OL_val_filt',inputData_OL_val',Ts);
+    sysID.data.OL.val.id      = iddata(sysID.data.OL.val.out      ,sysID.data.OL.val.in',Ts);
+    sysID.dataFilt.OL.val.id = iddata(sysID.dataFilt.OL.val.out',sysID.data.OL.val.in',Ts);
 else
-    OL_dat_val      = iddata(1,1,Ts);
-    OL_dat_val_filt = iddata(1,1,Ts);
+    sysID.data.OL.val.id      = iddata(1,1,Ts);
+    sysID.dataFilt.OL.val.id = iddata(1,1,Ts);
 end
 if removeTrans
-    OL_dat_trns      = iddata(outputData_OL_trns      ,inputData_OL_trns',Ts);
-    OL_dat_trns_filt = iddata(outputData_OL_trns_filt',inputData_OL_trns',Ts);
+    sysID.data.OL.trans.id      = iddata(sysID.data.OL.trans.out      ,sysID.data.OL.trans.in',Ts);
+    sysID.dataFilt.OL.trans.id = iddata(sysID.dataFilt.OL.trans.out',sysID.data.OL.trans.in',Ts);
 else
-    OL_dat_trns      = iddata(1,1,Ts);
-    OL_dat_trns_filt = iddata(1,1,Ts);
+    sysID.data.OL.trans.id      = iddata(1,1,Ts);
+    sysID.dataFilt.OL.trans.id = iddata(1,1,Ts);
 end
 
 optSS_sim = ssestOptions('Focus','Simulation');
@@ -293,30 +293,30 @@ optSS_prd = ssestOptions('Focus','Prediction');
 
 % All tested parametric identification options using OL data, using prediction focus
         disp('Open Loop identification using an initial system: in progress')
-    sysID.par.initSys.sim.OL.raw  = ssest(OL_dat,init_sys,optSS_sim);
-    sysID.par.initSys.sim.OL.filt = ssest(OL_dat_filt,init_sys,optSS_sim);
+    sysID.par.initSys.sim.OL.raw  = ssest(sysID.data.OL.train.id,init_sys,optSS_sim);
+    sysID.par.initSys.sim.OL.filt = ssest(sysID.dataFilt.OL.train.id,init_sys,optSS_sim);
         disp('Open Loop identification using an initial system: done')
 
         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): in progress'])
-    sysID.par.fixedOrder.sim.OL.raw  = ssest(OL_dat,nx,optSS_sim);
-    sysID.par.fixedOrder.sim.OL.filt = ssest(OL_dat_filt,nx,optSS_sim);
+    sysID.par.fixedOrder.sim.OL.raw  = ssest(sysID.data.OL.train.id,nx,optSS_sim);
+    sysID.par.fixedOrder.sim.OL.filt = ssest(sysID.dataFilt.OL.train.id,nx,optSS_sim);
         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): done'])
 
 % All tested parametric identification options using OL data, using prediction focus
         disp('Open Loop identification using an initial system: in progress')
-    sysID.par.initSys.prd.OL.raw  = ssest(OL_dat,init_sys,optSS_prd);
-    sysID.par.initSys.prd.OL.filt = ssest(OL_dat_filt,init_sys,optSS_prd);
+    sysID.par.initSys.prd.OL.raw  = ssest(sysID.data.OL.train.id,init_sys,optSS_prd);
+    sysID.par.initSys.prd.OL.filt = ssest(sysID.dataFilt.OL.train.id,init_sys,optSS_prd);
         disp('Open Loop identification using an initial system: done')
 
         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): in progress'])
-    sysID.par.fixedOrder.prd.OL.raw  = ssest(OL_dat,nx,optSS_prd);
-    sysID.par.fixedOrder.prd.OL.filt = ssest(OL_dat_filt,nx,optSS_prd);
+    sysID.par.fixedOrder.prd.OL.raw  = ssest(sysID.data.OL.train.id,nx,optSS_prd);
+    sysID.par.fixedOrder.prd.OL.filt = ssest(sysID.dataFilt.OL.train.id,nx,optSS_prd);
         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): done'])
 
 
         disp('Open Loop identification using the raw data: in progress')
-    sysID.par.straight.sim.OL.raw  = ssest(OL_dat);
-    sysID.par.straight.sim.OL.filt = ssest(OL_dat_filt);
+    sysID.par.straight.sim.OL.raw  = ssest(sysID.data.OL.train.id);
+    sysID.par.straight.sim.OL.filt = ssest(sysID.dataFilt.OL.train.id);
         disp('Open Loop identification using the raw data: done')
 
 %% Visualize and compare the identifications in frequency domain
@@ -473,13 +473,13 @@ figure(baseFig_sim+304);clf
 %% Validate and compare the identifications in time domain, using x-step ahead prediction and a residual test
 
 % Choose which dataset to use for the validation
-    % dataSet = OL_dat;
-    dataSet = OL_dat_val;
-    % dataSet = OL_dat_trns;
+    % dataSet = sysID.data.OL.train.id;
+    dataSet = sysID.data.OL.val.id;
+    % dataSet = sysID.data.OL.trans.id;
     
-    % dataSet_filt = OL_dat_filt;
-    dataSet_filt = OL_dat_val_filt;
-    % dataSet_filt = OL_dat_trns_filt;
+    % dataSet_filt = sysID.dataFilt.OL.train.id;
+    dataSet_filt = sysID.dataFilt.OL.val.id;
+    % dataSet_filt = sysID.dataFilt.OL.trans.id;
 
 % Choose the amount of steps to use for the prediction (inf=simulation)
     % xStep = 1;

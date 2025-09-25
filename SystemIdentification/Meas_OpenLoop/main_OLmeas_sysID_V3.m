@@ -27,6 +27,7 @@ removeTrans = false; % [true/false] Does the transient need to be removed
 
 %% Define the measurement paths
 dataDir_OL = 'C:\Users\maxja\Documents\(4)School\Master\Q9_Internship\matlabFiles\measurements\processedData\p__CB_none__ST_ms__SM_24w__SA_12w__DT_250829__MD_8h__WT_no__DS_1000.mat'; % Open loop data used for identification
+% dataDir_CL = 'C:\Users\maxja\Documents\(4)School\Master\Q9_Internship\matlabFiles\measurements\processedData\p__CB_none__ST_ms__SM_24w__SA_12w__DT_250905__MD_9h__WT_no__DS_100.mat'; % Closed loop data used for validation
 dataDir_CL = 'C:\Users\maxja\Documents\(4)School\Master\Q9_Internship\matlabFiles\measurements\processedData\p__CB_none__ST_ms__SM_24w__SA_12w__DT_250905__MD_9h__WT_no__DS_100.mat'; % Closed loop data used for validation
 
 % Load in the measurement data
@@ -208,7 +209,7 @@ figure(baseFig_sim+203);clf
 %% Parametric system identification, using time data, pre-requisites
 
 % Definitions for identification
-    nx = 5; % Model order for fixed order identification
+    nx = 3; % Model order for fixed order identification
 
 % nx order initial system
     initA = sysID.par.firstAprrox.OL.raw.A.*eye(nx);
@@ -221,25 +222,25 @@ figure(baseFig_sim+203);clf
     init_sys.Structure.K.Free = zeros(nx,1);
     
 % Define the data as iddata's
-    OL_dat      = iddata(sysID.data.OL.train.out'     ,sysID.data.OL.train.in(:,:)',Ts);
-    CL_dat      = iddata((datCL.tempTM-datCL.tempAmb)',datCL.Watt'                 ,datCL.Ts);
+    sysID.data.OL.train.id      = iddata(sysID.data.OL.train.out'     ,sysID.data.OL.train.in(:,:)',Ts);
+    sysID.data.CL.train.id      = iddata((datCL.tempTM-datCL.tempAmb)',datCL.Watt'                 ,datCL.Ts);
 
-    OL_dat_filt = iddata(sysID.dataFilt.OL.train.out' ,sysID.dataFilt.OL.train.in' ,Ts);
+    sysID.dataFilt.OL.train.id = iddata(sysID.dataFilt.OL.train.out' ,sysID.dataFilt.OL.train.in' ,Ts);
 
 % Define the data that is not used in the identification as validation data
 if makeValSet
-    OL_dat_val      = iddata(sysID.data.OL.val.out'      ,sysID.data.OL.val.in',Ts);
-    OL_dat_val_filt = iddata(sysID.dataFilt.OL.val.out',sysID.dataFilt.OL.val.in',Ts);
+    sysID.data.OL.val.id      = iddata(sysID.data.OL.val.out'      ,sysID.data.OL.val.in',Ts);
+    sysID.dataFilt.OL.val.id = iddata(sysID.dataFilt.OL.val.out',sysID.dataFilt.OL.val.in',Ts);
 else
-    OL_dat_val      = iddata(1,1,Ts);
-    OL_dat_val_filt = iddata(1,1,Ts);
+    sysID.data.OL.val.id      = iddata(1,1,Ts);
+    sysID.dataFilt.OL.val.id = iddata(1,1,Ts);
 end
 if removeTrans
-    OL_dat_trns      = iddata(sysID.data.OL.trans.out'      ,sysID.data.OL.trans.in',Ts);
-    OL_dat_trns_filt = iddata(sysID.dataFilt.OL.trans.out',sysID.dataFilt.OL.trans.in',Ts);
+    sysID.data.OL.trans.id      = iddata(sysID.data.OL.trans.out'      ,sysID.data.OL.trans.in',Ts);
+    sysID.dataFilt.OL.trans.id = iddata(sysID.dataFilt.OL.trans.out',sysID.dataFilt.OL.trans.in',Ts);
 else
-    OL_dat_trns      = iddata(1,1,Ts);
-    OL_dat_trns_filt = iddata(1,1,Ts);
+    sysID.data.OL.trans.id      = iddata(1,1,Ts);
+    sysID.dataFilt.OL.trans.id = iddata(1,1,Ts);
 end
 
 optSS_sim = ssestOptions('Focus','Simulation');
@@ -249,30 +250,30 @@ optSS_prd = ssestOptions('Focus','Prediction');
 
 % All tested parametric identification options using OL data, using prediction focus
         disp('Open Loop identification using an initial system: in progress')
-    sysID.par.initSys.sim.OL.raw  = ssest(OL_dat,init_sys,optSS_sim);
-    sysID.par.initSys.sim.OL.filt = ssest(OL_dat_filt,init_sys,optSS_sim);
+    sysID.par.initSys.sim.OL.raw  = ssest(sysID.data.OL.train.id,init_sys,optSS_sim);
+    sysID.par.initSys.sim.OL.filt = ssest(sysID.dataFilt.OL.train.id,init_sys,optSS_sim);
         disp('Open Loop identification using an initial system: done')
 
         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): in progress'])
-    sysID.par.fixedOrder.sim.OL.raw  = ssest(OL_dat,nx,optSS_sim);
-    sysID.par.fixedOrder.sim.OL.filt = ssest(OL_dat_filt,nx,optSS_sim);
+    sysID.par.fixedOrder.sim.OL.raw  = ssest(sysID.data.OL.train.id,nx,optSS_sim);
+    sysID.par.fixedOrder.sim.OL.filt = ssest(sysID.dataFilt.OL.train.id,nx,optSS_sim);
         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): done'])
 
 % All tested parametric identification options using OL data, using prediction focus
         disp('Open Loop identification using an initial system: in progress')
-    sysID.par.initSys.prd.OL.raw  = ssest(OL_dat,init_sys,optSS_prd);
-    sysID.par.initSys.prd.OL.filt = ssest(OL_dat_filt,init_sys,optSS_prd);
+    sysID.par.initSys.prd.OL.raw  = ssest(sysID.data.OL.train.id,init_sys,optSS_prd);
+    sysID.par.initSys.prd.OL.filt = ssest(sysID.dataFilt.OL.train.id,init_sys,optSS_prd);
         disp('Open Loop identification using an initial system: done')
 
         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): in progress'])
-    sysID.par.fixedOrder.prd.OL.raw  = ssest(OL_dat,nx,optSS_prd);
-    sysID.par.fixedOrder.prd.OL.filt = ssest(OL_dat_filt,nx,optSS_prd);
+    sysID.par.fixedOrder.prd.OL.raw  = ssest(sysID.data.OL.train.id,nx,optSS_prd);
+    sysID.par.fixedOrder.prd.OL.filt = ssest(sysID.dataFilt.OL.train.id,nx,optSS_prd);
         disp(['Open Loop identification using a fixed order (nx=',num2str(nx),'): done'])
 
 
         disp('Open Loop identification using the raw data: in progress')
-    sysID.par.straight.sim.OL.raw  = ssest(OL_dat);
-    sysID.par.straight.sim.OL.filt = ssest(OL_dat_filt);
+    sysID.par.straight.sim.OL.raw  = ssest(sysID.data.OL.train.id);
+    sysID.par.straight.sim.OL.filt = ssest(sysID.dataFilt.OL.train.id);
         disp('Open Loop identification using the raw data: done')
 
 %% Visualize and compare the identifications in frequency domain
@@ -362,13 +363,13 @@ figure(baseFig_sim+304);clf
 %% Validate and compare the identifications in time domain, using x-step ahead prediction and a residual test
 
 % Choose which dataset to use for the validation
-    % dataSet = OL_dat;
-    dataSet = OL_dat_val;
-    % dataSet = OL_dat_trns;
+    % dataSet = sysID.data.OL.train.id;
+    dataSet = sysID.data.OL.val.id;
+    % dataSet = sysID.data.OL.trans.id;
     
-    % dataSet_filt = OL_dat_filt;
-    dataSet_filt = OL_dat_val_filt;
-    % dataSet_filt = OL_dat_trns_filt;
+    % dataSet_filt = sysID.dataFilt.OL.train.id;
+    dataSet_filt = sysID.dataFilt.OL.val.id;
+    % dataSet_filt = sysID.dataFilt.OL.trans.id;
 
 % Choose the amount of steps to use for the prediction (inf=simulation)
     % xStep = 10;
@@ -387,6 +388,8 @@ err_fixedOrder = lsim(sysID.par.fixedOrder.sim.OL.filt,datCL.Watt,datCL.tVec)+da
 err_firstAprrox = lsim(sysID.par.firstAprrox.OL.filt,datCL.Watt,datCL.tVec)+datCL.tempAmb'-datCL.tempTM';
 err_straight = lsim(sysID.par.straight.sim.OL.filt,datCL.Watt,datCL.tVec)+datCL.tempAmb'-datCL.tempTM';
     
+% datCL.Watt = datCL.Watt./5;
+
 figure(baseFig_sim+651);clf
     subplot(211);hold on;grid minor
         plot(datCL.tVec,lsim(sysID.par.initSys.sim.OL.filt,datCL.Watt,datCL.tVec)+datCL.tempAmb')
@@ -415,6 +418,8 @@ figure(baseFig_sim+651);clf
                    ['Simulated data using identified model (firstApprox), RMSE: ',num2str(rms(err_firstAprrox),2),'degC'], ...
                    ['Simulated data using identified model (Straight), RMSE: ',num2str(rms(err_straight),2),'degC'], ...
                'location','southeast')
+
+% datCL.Watt = datCL.Watt.*5;
 
 %% Frequency domain identification
 
@@ -447,9 +452,9 @@ figure(baseFig_sim+701);clf
 %     resid(OL_freqDat_lpm,sysID.par.freqTRD.sim.OL.raw,sysID.par.freqLPM.sim.OL.raw);grid minor
 
 % figure(baseFig_sim+801);clf
-%     resid(OL_dat,sysID.par.freqTRD.sim.OL.raw,sysID.par.freqLPM.sim.OL.raw);grid minor
+%     resid(sysID.data.OL.train.id,sysID.par.freqTRD.sim.OL.raw,sysID.par.freqLPM.sim.OL.raw);grid minor
 % figure(baseFig_sim+802);clf
-%     resid(OL_dat,sysID.par.freqTRD.sim.OL.raw,sysID.par.freqLPM.sim.OL.raw);grid minor
+%     resid(sysID.data.OL.train.id,sysID.par.freqTRD.sim.OL.raw,sysID.par.freqLPM.sim.OL.raw);grid minor
 
 
 
