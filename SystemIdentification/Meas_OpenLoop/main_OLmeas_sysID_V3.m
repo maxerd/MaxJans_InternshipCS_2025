@@ -25,6 +25,9 @@ baseFig_sim = 8000;
 makeValSet  = true;  % [true/false] Is a seperate validation set needed?
 removeTrans = false; % [true/false] Does the transient need to be removed
 
+% Save the identification?
+saveID = true; % [true/false]
+
 %% Define the measurement paths
 dataDir_OL = 'C:\Users\maxja\Documents\(4)School\Master\Q9_Internship\matlabFiles\measurements\processedData\p__CB_none__ST_ms__SM_24w__SA_12w__DT_250829__MD_8h__WT_no__DS_1000.mat'; % Open loop data used for identification
 % dataDir_CL = 'C:\Users\maxja\Documents\(4)School\Master\Q9_Internship\matlabFiles\measurements\processedData\p__CB_none__ST_ms__SM_24w__SA_12w__DT_250905__MD_9h__WT_no__DS_100.mat'; % Closed loop data used for validation
@@ -209,7 +212,7 @@ figure(baseFig_sim+203);clf
 %% Parametric system identification, using time data, pre-requisites
 
 % Definitions for identification
-    nx = 3; % Model order for fixed order identification
+    nx = 4; % Model order for fixed order identification
 
 % nx order initial system
     initA = sysID.par.firstAprrox.OL.raw.A.*eye(nx);
@@ -383,20 +386,27 @@ figure(baseFig_sim+304);clf
 
 %% Time based validation using different (CL) data set
     
-err_initSys = lsim(sysID.par.initSys.sim.OL.filt,datCL.Watt,datCL.tVec)+datCL.tempAmb'-datCL.tempTM';
-err_fixedOrder = lsim(sysID.par.fixedOrder.sim.OL.filt,datCL.Watt,datCL.tVec)+datCL.tempAmb'-datCL.tempTM';
-err_firstAprrox = lsim(sysID.par.firstAprrox.OL.filt,datCL.Watt,datCL.tVec)+datCL.tempAmb'-datCL.tempTM';
-err_straight = lsim(sysID.par.straight.sim.OL.filt,datCL.Watt,datCL.tVec)+datCL.tempAmb'-datCL.tempTM';
+CLrange = 15000:length(datCL.Watt);
+
+err_initSys     = lsim(sysID.par.initSys.sim.OL.filt   ,datCL.Watt,datCL.tVec)+datCL.tempAmb'-datCL.tempTM';
+err_fixedOrder  = lsim(sysID.par.fixedOrder.sim.OL.filt,datCL.Watt,datCL.tVec)+datCL.tempAmb'-datCL.tempTM';
+err_firstAprrox = lsim(sysID.par.firstAprrox.OL.filt   ,datCL.Watt,datCL.tVec)+datCL.tempAmb'-datCL.tempTM';
+err_straight    = lsim(sysID.par.straight.sim.OL.filt  ,datCL.Watt,datCL.tVec)+datCL.tempAmb'-datCL.tempTM';
     
+sig_initSys     = lsim(sysID.par.initSys.sim.OL.filt   ,datCL.Watt,datCL.tVec)+datCL.tempAmb';
+sig_fixedOrder  = lsim(sysID.par.fixedOrder.sim.OL.filt,datCL.Watt,datCL.tVec)+datCL.tempAmb';
+sig_firstAprrox = lsim(sysID.par.firstAprrox.OL.filt   ,datCL.Watt,datCL.tVec)+datCL.tempAmb';
+sig_straight    = lsim(sysID.par.straight.sim.OL.filt  ,datCL.Watt,datCL.tVec)+datCL.tempAmb';
+
 % datCL.Watt = datCL.Watt./5;
 
 figure(baseFig_sim+651);clf
     subplot(211);hold on;grid minor
-        plot(datCL.tVec,lsim(sysID.par.initSys.sim.OL.filt,datCL.Watt,datCL.tVec)+datCL.tempAmb')
-        plot(datCL.tVec,lsim(sysID.par.fixedOrder.sim.OL.filt,datCL.Watt,datCL.tVec)+datCL.tempAmb')
-        plot(datCL.tVec,lsim(sysID.par.firstAprrox.OL.filt,datCL.Watt,datCL.tVec)+datCL.tempAmb')
-        plot(datCL.tVec,lsim(sysID.par.straight.sim.OL.filt,datCL.Watt,datCL.tVec)+datCL.tempAmb')
-        plot(datCL.tVec,datCL.tempTM)
+        plot(datCL.tVec(CLrange),sig_initSys(CLrange))
+        plot(datCL.tVec(CLrange),sig_fixedOrder(CLrange))
+        plot(datCL.tVec(CLrange),sig_firstAprrox(CLrange))
+        plot(datCL.tVec(CLrange),sig_straight(CLrange))
+        plot(datCL.tVec(CLrange),datCL.tempTM(CLrange))
             xlabel('Time [s]')
             ylabel('Temperature [degC]')
             title('Comparison of measured and simulated data using identified model')
@@ -406,10 +416,10 @@ figure(baseFig_sim+651);clf
                    'Simulated data using identified model (Straight)', ...
                    'Measured data','location','southeast')
     subplot(212);hold on;grid minor
-        plot(datCL.tVec,err_initSys)
-        plot(datCL.tVec,err_fixedOrder)
-        plot(datCL.tVec,err_firstAprrox)
-        plot(datCL.tVec,err_straight)
+        plot(datCL.tVec(CLrange),detrend(err_initSys(CLrange),1))
+        plot(datCL.tVec(CLrange),detrend(err_fixedOrder(CLrange),1))
+        plot(datCL.tVec(CLrange),detrend(err_firstAprrox(CLrange),1))
+        plot(datCL.tVec(CLrange),detrend(err_straight(CLrange),1))
             xlabel('Time [s]')
             ylabel('Temperature diff. [degC]')
             title('Difference between measured and simulated data using identified model')
@@ -420,6 +430,33 @@ figure(baseFig_sim+651);clf
                'location','southeast')
 
 % datCL.Watt = datCL.Watt.*5;
+
+[PSD_initsys    ,CAS_initsys    ,freqVec_initsys]     = fftCas_V2(err_initSys(CLrange)    ,datCL.Ts);
+[PSD_fixedOrder ,CAS_fixedOrder ,freqVec_fixedOrder]  = fftCas_V2(err_fixedOrder(CLrange) ,datCL.Ts);
+[PSD_firstAprrox,CAS_firstAprrox,freqVec_firstAprrox] = fftCas_V2(err_firstAprrox(CLrange),datCL.Ts);
+[PSD_straight   ,CAS_straight   ,freqVec_straight]    = fftCas_V2(err_straight(CLrange)   ,datCL.Ts);
+    
+figure(baseFig_sim+652);clf
+    subplot(211)
+        semilogx(freqVec_initsys    ,db(squeeze(PSD_initsys)));grid minor;hold on
+        semilogx(freqVec_fixedOrder ,db(squeeze(PSD_fixedOrder)))
+        semilogx(freqVec_firstAprrox,db(squeeze(PSD_firstAprrox)))
+        semilogx(freqVec_straight   ,db(squeeze(PSD_straight)))
+            xlabel('Frequency [Hz]')
+            ylabel('Power [$degC^2/Hz$]')
+            title('PSD of simulation error')
+            legend('initSys', ...
+                   'fixed order', ...
+                   'firstApprox', ...
+                   'Straight','location','southeast')
+    subplot(212)
+        semilogx(freqVec_initsys    ,CAS_initsys    );grid minor;hold on
+        semilogx(freqVec_fixedOrder ,CAS_fixedOrder )
+        semilogx(freqVec_firstAprrox,CAS_firstAprrox)
+        semilogx(freqVec_straight   ,CAS_straight   )
+            xlabel('Frequency [Hz]')
+            ylabel('RMSE [degC]')
+            title('CAS of simulation error')
 
 %% Frequency domain identification
 
@@ -434,17 +471,33 @@ OL_freqDat_lpm_filt = idfrd(squeeze(sysID.nonPar.lpm.OL.filt.ResponseData),sysID
 % sysID.par.freqLPM.sim.OL.raw = ssest(OL_freqDat_lpm,nx_freq,optSS_sim);
 % sysID.par.freqTRD.sim.OL.raw  = ssest(OL_freqDat_trd     ,init_sys,optSS_sim);
 % sysID.par.freqLPM.sim.OL.raw  = ssest(OL_freqDat_lpm     ,init_sys,optSS_sim);
-sysID.par.freqTRD.sim.OL.raw  = ssest(OL_freqDat_trd     ,sysID.par.fixedOrder.sim.OL.raw,optSS_sim);
-sysID.par.freqLPM.sim.OL.raw  = ssest(OL_freqDat_lpm     ,sysID.par.fixedOrder.sim.OL.raw,optSS_sim);
-% sysID.par.freqTRD.sim.OL.filt = ssest(OL_freqDat_trd_filt,sysID.par.fixedOrder.sim.OL.raw,optSS_sim);
-% sysID.par.freqLPM.sim.OL.filt = ssest(OL_freqDat_lpm_filt,sysID.par.fixedOrder.sim.OL.raw,optSS_sim);
+% sysID.par.freqTRD.sim.OL.raw  = ssest(OL_freqDat_trd     ,sysID.par.fixedOrder.sim.OL.raw,optSS_sim);
+% sysID.par.freqLPM.sim.OL.raw  = ssest(OL_freqDat_lpm     ,sysID.par.fixedOrder.sim.OL.raw,optSS_sim);
+sysID.par.freqTRD.sim.OL.raw  = ssest(OL_freqDat_trd_filt,sysID.par.fixedOrder.sim.OL.raw,optSS_sim);
+sysID.par.freqLPM.sim.OL.raw  = ssest(OL_freqDat_lpm_filt,sysID.par.fixedOrder.sim.OL.raw,optSS_sim);
 
 %%
+
 figure(baseFig_sim+701);clf
+    set(gcf,'position',[800 100 600 450])
+    sgtitle("Bode plots of frequency identification, using trad. and LPM")
+        subplot(211)
+            simpleBodemag(sysID.par.freqTRD.sim.OL.raw ,'Hz',lw,bodeRange);hold on;grid on
+            simpleBodemag(sysID.par.freqLPM.sim.OL.raw ,'Hz',lw,bodeRange);grid on
+            simpleBodemag(sysID.par.fixedOrder.sim.OL.raw,'Hz',lw,bodeRange,'g--');grid on
+                legend('Using traditional FRF','Using LPM FRF','Time-based identification','location','best')
+        subplot(212)
+            simpleBodephase(sysID.par.freqTRD.sim.OL.raw ,'Hz',lw,bodeRange,'wrap');hold on;grid on
+            simpleBodephase(sysID.par.freqLPM.sim.OL.raw ,'Hz',lw,bodeRange,'wrap');grid on
+            simpleBodephase(sysID.par.fixedOrder.sim.OL.raw,'Hz',lw,bodeRange,'wrap','g--');grid on
+                legend('InitSysIdent','Fixed order','First order approx','Straight data','location','best')
+
+
+% figure(baseFig_sim+701);clf
     % bode(sysID.par.freqTRD.sim.OL.raw,sysID.par.freqLPM.sim.OL.raw,sysID.par.freqTRD.sim.OL.filt,sysID.par.freqLPM.sim.OL.filt,G(1,1),'g--',opt);grid minor
     % bode(sysID.par.freqTRD.sim.OL.raw,sysID.par.freqLPM.sim.OL.raw,G(1,1),'g--',opt);grid minor
     % bode(sysID.par.freqTRD.sim.OL.raw,sysID.par.freqLPM.sim.OL.raw,sysID.nonPar.lpm.OL.raw,'g--',opt);grid minor
-    bode(sysID.par.freqTRD.sim.OL.raw,sysID.par.freqLPM.sim.OL.raw,sysID.par.straight.sim.OL.raw,'g--',opt);grid minor
+    % bode(sysID.par.freqTRD.sim.OL.raw,sysID.par.freqLPM.sim.OL.raw,sysID.par.straight.sim.OL.raw,'g--',opt);grid minor
 
 % figure(baseFig_sim+801);clf
 %     resid(OL_freqDat_trd,sysID.par.freqTRD.sim.OL.raw,sysID.par.freqLPM.sim.OL.raw);grid minor
@@ -456,9 +509,11 @@ figure(baseFig_sim+701);clf
 % figure(baseFig_sim+802);clf
 %     resid(sysID.data.OL.train.id,sysID.par.freqTRD.sim.OL.raw,sysID.par.freqLPM.sim.OL.raw);grid minor
 
+%% Save the identification data
 
-
-
+if saveID
+    save(['../_IDdata/sysID_OL_meas_',datestr(now, 'yymmdd_HHMMSS'),'.mat'],'sysID','dataDir_OL','dat','lw','tMeas','nx')
+end
 
 
 

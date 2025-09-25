@@ -17,10 +17,16 @@ for i = 1:length(index_interpreter)
 end
 
 %% Main variables
+
+% Figure number of of which all others are based
 baseFig_sim = 8000;
 
-makeValSet  = true;
-removeTrans = false;
+% Some user inputs
+makeValSet  = true;  % [true/false] Is a seperate validation set needed?
+removeTrans = false; % [true/false] Does the transient need to be removed
+
+% Save the identification?
+saveID = true; % [true/false]
 
 %% Make the system used for data generation
 disp('Constructing system model')
@@ -30,7 +36,7 @@ G = sysTMC(32,[3 6]);
 
 %% Define some simulation variables
 % fs = 1;     % [Hz]    Sampling frequency
-fs = 0.01;     % [Hz]    Sampling frequency
+fs = 0.1;     % [Hz]    Sampling frequency
 Ts = 1/fs;  % [s]     Sampling time
 tMeas = 8; % [hours] Measurement time
 
@@ -252,7 +258,7 @@ figure(baseFig_sim+203);clf
 %% Parametric system identification, using time data, pre-requisites
 
 % Definitions for identification
-    nx = 3; % Model order for fixed order identification
+    nx = 4; % Model order for fixed order identification
 
 % nx order initial system
     % init_sys = idss([sysID.par.firstAprrox.OL.raw.A 0 0;0 sysID.par.firstAprrox.OL.raw.A*10 0;0 0 sysID.par.firstAprrox.OL.raw.A*100],[sysID.par.firstAprrox.OL.raw.B;0;0],[sysID.par.firstAprrox.OL.raw.C 0 0],0,zeros(3,1),zeros(3,1),0);
@@ -330,14 +336,14 @@ figure(baseFig_sim+301);clf
             simpleBodemag(sysID.par.fixedOrder.sim.OL.raw,'Hz',lw,bodeRange);grid minor
             simpleBodemag(sysID.par.firstAprrox.OL.raw   ,'Hz',lw,bodeRange);grid minor
             simpleBodemag(sysID.par.straight.sim.OL.raw  ,'Hz',lw,bodeRange);grid minor
-            simpleBodemag(sysTMC(32,3)                   ,'Hz',lw,'g--',bodeRange);grid minor
+            simpleBodemag(G(1,1)                   ,'Hz',lw,'g--',bodeRange);grid minor
                 legend('InitSysIdent','Fixed order','First order approx','Straight data','Model','location','best')
         subplot(212)
             simpleBodephase(sysID.par.initSys.sim.OL.raw   ,'Hz',lw,bodeRange,'wrap');hold on;grid minor
             simpleBodephase(sysID.par.fixedOrder.sim.OL.raw,'Hz',lw,bodeRange,'wrap');grid minor
             simpleBodephase(sysID.par.firstAprrox.OL.raw   ,'Hz',lw,bodeRange,'wrap');grid minor
             simpleBodephase(sysID.par.straight.sim.OL.raw  ,'Hz',lw,bodeRange,'wrap');grid minor
-            simpleBodephase(sysTMC(32,3)                   ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
+            simpleBodephase(G(1,1)                   ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
                 legend('InitSysIdent','Fixed order','First order approx','Straight data','Model','location','best')
 
 figure(baseFig_sim+302);clf
@@ -348,14 +354,14 @@ figure(baseFig_sim+302);clf
             simpleBodemag(sysID.par.fixedOrder.sim.OL.filt,'Hz',lw,bodeRange);grid minor
             simpleBodemag(sysID.par.firstAprrox.OL.filt   ,'Hz',lw,bodeRange);grid minor
             simpleBodemag(sysID.par.straight.sim.OL.filt  ,'Hz',lw,bodeRange);grid minor
-            simpleBodemag(sysTMC(32,3)                    ,'Hz',lw,'g--',bodeRange);grid minor
+            simpleBodemag(G(1,1)                    ,'Hz',lw,'g--',bodeRange);grid minor
                 legend('InitSysIdent','Fixed order','First order approx','Straight data','Model','location','best')
         subplot(212)
             simpleBodephase(sysID.par.initSys.sim.OL.filt   ,'Hz',lw,bodeRange,'wrap');hold on;grid minor
             simpleBodephase(sysID.par.fixedOrder.sim.OL.filt,'Hz',lw,bodeRange,'wrap');grid minor
             simpleBodephase(sysID.par.firstAprrox.OL.filt   ,'Hz',lw,bodeRange,'wrap');grid minor
             simpleBodephase(sysID.par.straight.sim.OL.filt  ,'Hz',lw,bodeRange,'wrap');grid minor
-            simpleBodephase(sysTMC(32,3)                    ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
+            simpleBodephase(G(1,1)                    ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
                 legend('InitSysIdent','Fixed order','First order approx','Straight data','Model','location','best')
 
 % figure(baseFig_sim+303);clf
@@ -364,53 +370,53 @@ figure(baseFig_sim+302);clf
 %         subplot(421)
 %             simpleBodemag(sysID.par.initSys.sim.OL.raw ,'Hz',lw,bodeRange);hold on;grid minor
 %             simpleBodemag(sysID.par.initSys.sim.OL.filt,'Hz',lw,bodeRange);grid minor
-%             simpleBodemag(sysTMC(32,3)                 ,'Hz',lw,'g--',bodeRange);grid minor
+%             simpleBodemag(G(1,1)                 ,'Hz',lw,'g--',bodeRange);grid minor
 %             xlim([bodeRange(1) bodeRange(end)])
 %                 title('Initial system')
 %                 legend('Raw','Filtered','location','best')
 %         subplot(423)
 %             simpleBodephase(sysID.par.initSys.sim.OL.raw ,'Hz',lw,bodeRange,'wrap');hold on;grid minor
 %             simpleBodephase(sysID.par.initSys.sim.OL.filt,'Hz',lw,bodeRange,'wrap');grid minor
-%             simpleBodephase(sysTMC(32,3)                 ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
+%             simpleBodephase(G(1,1)                 ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
 %             xlim([bodeRange(1) bodeRange(end)])
 %                 legend('Raw','Filtered','location','best')
 %         subplot(422)
 %             simpleBodemag(sysID.par.fixedOrder.sim.OL.raw ,'Hz',lw,bodeRange);hold on;grid minor
 %             simpleBodemag(sysID.par.fixedOrder.sim.OL.filt,'Hz',lw,bodeRange);grid minor
-%             simpleBodemag(sysTMC(32,3)                    ,'Hz',lw,'g--',bodeRange);grid minor
+%             simpleBodemag(G(1,1)                    ,'Hz',lw,'g--',bodeRange);grid minor
 %             xlim([bodeRange(1) bodeRange(end)])
 %                 title(['Fixed order, nx=',num2str(nx)])
 %                 legend('Raw','Filtered','location','best')
 %         subplot(424)
 %             simpleBodephase(sysID.par.fixedOrder.sim.OL.raw ,'Hz',lw,bodeRange,'wrap');hold on;grid minor
 %             simpleBodephase(sysID.par.fixedOrder.sim.OL.filt,'Hz',lw,bodeRange,'wrap');grid minor
-%             simpleBodephase(sysTMC(32,3)                    ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
+%             simpleBodephase(G(1,1)                    ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
 %             xlim([bodeRange(1) bodeRange(end)])
 %                 legend('Raw','Filtered','location','best')
 %         subplot(425)
 %             simpleBodemag(sysID.par.firstAprrox.OL.raw ,'Hz',lw,bodeRange);hold on;grid minor
 %             simpleBodemag(sysID.par.firstAprrox.OL.filt,'Hz',lw,bodeRange);grid minor
-%             simpleBodemag(sysTMC(32,3)                 ,'Hz',lw,'g--',bodeRange);grid minor
+%             simpleBodemag(G(1,1)                 ,'Hz',lw,'g--',bodeRange);grid minor
 %             xlim([bodeRange(1) bodeRange(end)])
 %                 title('First order approximation')
 %                 legend('Raw','Filtered','location','best')
 %         subplot(427)
 %             simpleBodephase(sysID.par.firstAprrox.OL.raw ,'Hz',lw,bodeRange,'wrap');hold on;grid minor
 %             simpleBodephase(sysID.par.firstAprrox.OL.filt,'Hz',lw,bodeRange,'wrap');grid minor
-%             simpleBodephase(sysTMC(32,3)                 ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
+%             simpleBodephase(G(1,1)                 ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
 %             xlim([bodeRange(1) bodeRange(end)])
 %                 legend('Raw','Filtered','location','best')
 %         subplot(426)
 %             simpleBodemag(sysID.par.straight.sim.OL.raw ,'Hz',lw,bodeRange);hold on;grid minor
 %             simpleBodemag(sysID.par.straight.sim.OL.filt,'Hz',lw,bodeRange);grid minor
-%             simpleBodemag(sysTMC(32,3)                  ,'Hz',lw,'g--',bodeRange);grid minor
+%             simpleBodemag(G(1,1)                  ,'Hz',lw,'g--',bodeRange);grid minor
 %             xlim([bodeRange(1) bodeRange(end)])
 %                 title('Straight data')
 %                 legend('Raw','Filtered','location','best')
 %         subplot(428)
 %             simpleBodephase(sysID.par.straight.sim.OL.raw ,'Hz',lw,bodeRange,'wrap');hold on;grid minor
 %             simpleBodephase(sysID.par.straight.sim.OL.filt,'Hz',lw,bodeRange,'wrap');grid minor
-%             simpleBodephase(sysTMC(32,3)                  ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
+%             simpleBodephase(G(1,1)                  ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
 %             xlim([bodeRange(1) bodeRange(end)])
 %                 legend('Raw','Filtered','location','best')
 
@@ -420,53 +426,53 @@ figure(baseFig_sim+304);clf
         subplot(241)
             simpleBodemag(sysID.par.initSys.sim.OL.raw ,'Hz',lw,bodeRange);hold on;grid minor
             simpleBodemag(sysID.par.initSys.sim.OL.filt,'Hz',lw,bodeRange);grid minor
-            simpleBodemag(sysTMC(32,3)                 ,'Hz',lw,'g--',bodeRange);grid minor
+            simpleBodemag(G(1,1)                 ,'Hz',lw,'g--',bodeRange);grid minor
             xlim([bodeRange(1) bodeRange(end)])
                 title('Initial system')
                 legend('Using raw data','Using filtered data','location','best')
         subplot(245)
             simpleBodephase(sysID.par.initSys.sim.OL.raw ,'Hz',lw,bodeRange,'wrap');hold on;grid minor
             simpleBodephase(sysID.par.initSys.sim.OL.filt,'Hz',lw,bodeRange,'wrap');grid minor
-            simpleBodephase(sysTMC(32,3)                 ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
+            simpleBodephase(G(1,1)                 ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
             xlim([bodeRange(1) bodeRange(end)])
                 legend('Using raw data','Using filtered data','location','best')
         subplot(242)
             simpleBodemag(sysID.par.fixedOrder.sim.OL.raw ,'Hz',lw,bodeRange);hold on;grid minor
             simpleBodemag(sysID.par.fixedOrder.sim.OL.filt,'Hz',lw,bodeRange);grid minor
-            simpleBodemag(sysTMC(32,3)                    ,'Hz',lw,'g--',bodeRange);grid minor
+            simpleBodemag(G(1,1)                    ,'Hz',lw,'g--',bodeRange);grid minor
             xlim([bodeRange(1) bodeRange(end)])
                 title(['Fixed order, nx=',num2str(nx)])
                 legend('Using raw data','Using filtered data','location','best')
         subplot(246)
             simpleBodephase(sysID.par.fixedOrder.sim.OL.raw ,'Hz',lw,bodeRange,'wrap');hold on;grid minor
             simpleBodephase(sysID.par.fixedOrder.sim.OL.filt,'Hz',lw,bodeRange,'wrap');grid minor
-            simpleBodephase(sysTMC(32,3)                    ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
+            simpleBodephase(G(1,1)                    ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
             xlim([bodeRange(1) bodeRange(end)])
                 legend('Using raw data','Using filtered data','location','best')
         subplot(243)
             simpleBodemag(sysID.par.firstAprrox.OL.raw ,'Hz',lw,bodeRange);hold on;grid minor
             simpleBodemag(sysID.par.firstAprrox.OL.filt,'Hz',lw,bodeRange);grid minor
-            simpleBodemag(sysTMC(32,3)                 ,'Hz',lw,'g--',bodeRange);grid minor
+            simpleBodemag(G(1,1)                 ,'Hz',lw,'g--',bodeRange);grid minor
             xlim([bodeRange(1) bodeRange(end)])
                 title('First order approximation')
                 legend('Using raw data','Using filtered data','location','best')
         subplot(247)
             simpleBodephase(sysID.par.firstAprrox.OL.raw ,'Hz',lw,bodeRange,'wrap');hold on;grid minor
             simpleBodephase(sysID.par.firstAprrox.OL.filt,'Hz',lw,bodeRange,'wrap');grid minor
-            simpleBodephase(sysTMC(32,3)                 ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
+            simpleBodephase(G(1,1)                 ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
             xlim([bodeRange(1) bodeRange(end)])
                 legend('Using raw data','Using filtered data','location','best')
         subplot(244)
             simpleBodemag(sysID.par.straight.sim.OL.raw ,'Hz',lw,bodeRange);hold on;grid minor
             simpleBodemag(sysID.par.straight.sim.OL.filt,'Hz',lw,bodeRange);grid minor
-            simpleBodemag(sysTMC(32,3)                  ,'Hz',lw,'g--',bodeRange);grid minor
+            simpleBodemag(G(1,1)                  ,'Hz',lw,'g--',bodeRange);grid minor
             xlim([bodeRange(1) bodeRange(end)])
                 title('Straight data')
                 legend('Using raw data','Using filtered data','location','best')
         subplot(248)
             simpleBodephase(sysID.par.straight.sim.OL.raw ,'Hz',lw,bodeRange,'wrap');hold on;grid minor
             simpleBodephase(sysID.par.straight.sim.OL.filt,'Hz',lw,bodeRange,'wrap');grid minor
-            simpleBodephase(sysTMC(32,3)                  ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
+            simpleBodephase(G(1,1)                  ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
             xlim([bodeRange(1) bodeRange(end)])
                 legend('Using raw data','Using filtered data','location','best')
 
@@ -516,6 +522,11 @@ figure(baseFig_sim+701);clf
     bode(sysID.par.freqTRD.sim.OL.raw,sysID.par.freqLPM.sim.OL.raw,G(1,1),'g--',opt);grid minor
 
 
+%% Save the identification data
+
+if saveID
+    save(['../_IDdata/sysID_OL_sim_',datestr(now, 'yymmdd_HHMMSS'),'.mat'],'sysID','G','lw','tMeas','nx')
+end
 
 
 
