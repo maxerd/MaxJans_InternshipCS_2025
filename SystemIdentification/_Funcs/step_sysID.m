@@ -12,16 +12,16 @@ H_ident = ss(H_ident);
 % H_ident = ss(H_ident.A,H_ident.B/(1/H_ident.C),H_ident.C*1/H_ident.C,H_ident.D);
 H_ident = compreal(H_ident,'o');
 
-H_amb = H_ident;
-H_amb.B = [H_ident.B H_ident.B/A];
-H_amb = compreal(H_amb,'o');
-
-% x0_H = datOut(1)-datOut(1);
-x0_H = datOut(1).*ones(1,1);
-
-% size(tVec)
-% y_H   = lsim(H_ident,datIn,tVec,x0_H);
-y_H   = lsim(H_amb,[datIn datAmb]',tVec,x0_H);
+% H_amb = H_ident;
+% H_amb.B = [H_ident.B H_ident.B/A];
+% H_amb = compreal(H_amb,'o');
+% 
+% % x0_H = datOut(1)-datOut(1);
+% x0_H = datOut(1).*ones(1,1);
+% 
+% % size(tVec)
+% % y_H   = lsim(H_ident,datIn,tVec,x0_H);
+% y_H   = lsim(H_amb,[datIn datAmb]',tVec,x0_H);
 
 % figure(901);clf;hold on
 %     subplot(211);hold on;grid minor

@@ -3,30 +3,24 @@ clear all
 clc
 
 %% Pre-requisites
-opt = bodeoptions('cstprefs');
-opt.PhaseWrapping = 'on';
-opt.FreqUnits = 'Hz';
-
-lw = 1.5; % Define the wanted linewidth for the plots
-
-list_factory = fieldnames(get(groot,'factory'));
-index_interpreter = find(contains(list_factory,'Interpreter'));
-for i = 1:length(index_interpreter)
-    default_name = strrep(list_factory{index_interpreter(i)},'factory','default');
-    set(groot, default_name,'latex');
-end
+OL_sim_setup
 
 %% Main variables
 
 % Figure number of of which all others are based
 baseFig_sim = 8000;
-
-% Some user inputs
-makeValSet  = true;  % [true/false] Is a seperate validation set needed?
-removeTrans = false; % [true/false] Does the transient need to be removed
+plotAll = false;
 
 % Save the identification?
-saveID = true; % [true/false]
+saveID = false; % [true/false]
+
+% Define some time variables
+Ts = 10;  % [s]     Sampling time
+fs = 1/Ts;     % [Hz]    Sampling frequency
+tMeas = 8; % [hours] Measurement time
+
+% Ambient (starting) temperature
+Tamb = 23; % [degC] Ambient Temperature
 
 %% Make the system used for data generation
 disp('Constructing system model')
@@ -34,14 +28,22 @@ main_lumpedSystem_water_V3
 
 G = sysTMC(32,[3 6]);
 
+%% Define the input signal
+maxAmplitude = 120; % [W] Maximum exitation signal
+positiveOnly = 1;  % [-] Define whether the exitation signal can be negative
+
+disp('Generating multisine for identification')
+dist     = genMultisine(fs, tMeas*3600*fs, 1, maxAmplitude,     positiveOnly);
+dist_val = dist;
+
+
+%% Some user inputs
+makeValSet  = true;  % [true/false] Is a seperate validation set needed?
+removeTrans = false; % [true/false] Does the transient need to be removed
+
 %% Define some simulation variables
-% fs = 1;     % [Hz]    Sampling frequency
-fs = 0.1;     % [Hz]    Sampling frequency
-Ts = 1/fs;  % [s]     Sampling time
-tMeas = 8; % [hours] Measurement time
 
 T0 = 23; % [degC] Inital Temperature
-Tamb = 23; % [degC] Ambient Temperature
 
 N = tMeas*3600*fs; % [-] Measurement samples
 tVec = linspace(fs,tMeas*3600,N); % [s] Time vector
@@ -49,14 +51,6 @@ tVec = linspace(fs,tMeas*3600,N); % [s] Time vector
 %% Define the noise on the signal
 v     = 0.15.*randn(N,1);
 v_val = 0.15.*randn(N,1);
-
-%% Define the input signal
-maxAmplitude = 24; % [W] Maximum exitation signal
-positiveOnly = 1;  % [-] Define whether the exitation signal can be negative
-
-disp('Generating multisine for identification')
-dist     = genMultisine(fs, N, 1, maxAmplitude,     positiveOnly);
-dist_val = dist;
 
 %% Plot the noise signal
 % Make the PSD of the noise and disturbance signals
@@ -95,6 +89,10 @@ dist_val = dist;
             ylabel('Power [$W^2/Hz$]')
             title('Power of disturbance/identification signal applied to simulation')
 
+%% First order parametric approximation, using time data
+    sysID.par.firstAprrox.OL.raw = step_sysID(dist',zeros(size(dist))',y_OL-ambVec'',tVec,10000*fs);
+    sysID.par.firstAprrox.OL.filt = step_sysID(dist',zeros(size(dist))',y_OL-ambVec'',tVec,10000*fs);
+
 %% Simulate the systems
 
 disp('Running simulation')
@@ -109,12 +107,25 @@ disp('Running simulation')
     y_OL     = lsim(G,[dist    ;ambVec],tVec,x0_OL)+v;
     y_OL_val = lsim(G,[dist_val;ambVec],tVec,x0_OL)+v_val;
 
+% First order parametric approximation, using time data
+    sysID.par.firstAprrox.OL.raw = step_sysID(dist',zeros(size(dist))',y_OL-ambVec'',tVec,10000*fs);
+
+% Remove the transient using the first order approximation
+    y_approx1     = lsim(sysID.par.firstAprrox.OL.raw,[dist],tVec);
+    y_approx1_val = lsim(sysID.par.firstAprrox.OL.raw,[dist_val],tVec);
+    % figure;plot(tVec,y_OL-y_approx1)
+    % figure;plot(tVec,y_OL,tVec,y_approx1)
+    % y_OL     = ((y_OL-y_approx1));
+    figure;plot(tVec,y_OL);grid minor
+    % y_OL_val = (y_OL_val-y_approx1_val);
 
 %% Plot the simulation results
 
 figure(baseFig_sim+101);clf
-    set(gcf,'position',[700 100 700 300])
-    plot(tVec,y_OL,LineWidth=lw);grid minor
+    % set(gcf,'position',[700 100 700 300])
+    plot(tVec,y_OL-detrend(y_OL,6),LineWidth=lw);grid minor;hold on
+    % plot(tVec,v);grid minor
+    % xlim([0 1000])
         xlabel('Time [s]')
         ylabel('Temperature [degC]')
         title(['Thermal mass temperature, open loop identification, ',num2str(tMeas),' hours'])
@@ -128,7 +139,7 @@ else
     idx1_OL = 1;
 end
 if makeValSet
-    idx2_OL = N-(N-8*3600*fs)*0.2;
+    idx2_OL = N-(N-6*3600*fs)*0.2;
 else
     idx2_OL = N;
 end
@@ -136,7 +147,7 @@ end
 idxRange_OL_trns = 1:idx1_OL+1;
 idxRange_OL      = idx1_OL:idx2_OL;
 % idxRange_OL_val  = (idx2_OL-1):N;
-idxRange_OL_val  = (idx1_OL):N;
+idxRange_OL_val  = (idx2_OL):N;
 
 %% Define the in and output vectors, for easy and consistent use
 % Open loop
@@ -233,10 +244,13 @@ sysID.data.OL.full.tVec  = tVec;
             simpleBodephase(G(1,1),'Hz',lw,'g--','wrap');grid minor
             xlim([1e-4 0.01])
                 legend('Traditional','LPM','Model','location','best')
+    print('./_Figures/OL/nonPar/tradAndLPM_FRF_1','-depsc')
 
 %% First order parametric approximation, using time data
-    sysID.par.firstAprrox.OL.raw  = step_sysID(sysID.data.OL.full.in',zeros(size(sysID.data.OL.full.in))',sysID.data.OL.full.out,sysID.data.OL.full.tVec,10000*fs);
-    sysID.par.firstAprrox.OL.filt = step_sysID(sysID.dataFilt.OL.full.in',zeros(size(sysID.dataFilt.OL.full.in))',sysID.dataFilt.OL.full.out',sysID.data.OL.full.tVec,10000*fs);
+    % sysID.par.firstAprrox.OL.raw  = step_sysID(sysID.data.OL.full.in',zeros(size(sysID.data.OL.full.in))',sysID.data.OL.full.out,sysID.data.OL.full.tVec,10000*fs);
+    % sysID.par.firstAprrox.OL.filt = step_sysID(sysID.dataFilt.OL.full.in',zeros(size(sysID.dataFilt.OL.full.in))',sysID.dataFilt.OL.full.out',sysID.data.OL.full.tVec,10000*fs);
+    sysID.par.firstAprrox.OL.raw  = firstOrderApprox(sysID.data.OL.train.id);
+    sysID.par.firstAprrox.OL.filt = firstOrderApprox(sysID.dataFilt.OL.train.id);
 
 %% Visualization of the first order approximation
 bodeRange = logspace(-6,-1,100);
@@ -254,11 +268,12 @@ figure(baseFig_sim+203);clf
             simpleBodephase(sysID.par.firstAprrox.OL.filt,'Hz',lw,'wrap',bodeRange,'-.');grid minor
             simpleBodephase(G(1,1),'Hz',lw,'g--','wrap',bodeRange);grid minor
                 legend('Gotten from unfiltered data','Gotten from filtered data','Model','location','best')
+    print('./_Figures/OL/parTime/firstOrderApprox_1','-depsc')
 
 %% Parametric system identification, using time data, pre-requisites
 
 % Definitions for identification
-    nx = 4; % Model order for fixed order identification
+    nx = 5; % Model order for fixed order identification
 
 % nx order initial system
     % init_sys = idss([sysID.par.firstAprrox.OL.raw.A 0 0;0 sysID.par.firstAprrox.OL.raw.A*10 0;0 0 sysID.par.firstAprrox.OL.raw.A*100],[sysID.par.firstAprrox.OL.raw.B;0;0],[sysID.par.firstAprrox.OL.raw.C 0 0],0,zeros(3,1),zeros(3,1),0);
@@ -296,6 +311,14 @@ optSS_sim = ssestOptions('Focus','Simulation');
 optSS_prd = ssestOptions('Focus','Prediction');
 
 %% Parametric system identification, using time data
+
+% opts.focus = 'sim';
+% opts.bodeRange = logspace(-6,-1,1000);
+% opts.lw = 1.5;
+figure;initializedIdent_OL(sysID.data.OL.train.id,sysID.par.firstAprrox.OL.raw,opts);hold on
+        fixedOrderIdent_OL(sysID.data.OL.train.id,3,opts)
+               rawIdent_OL(sysID.data.OL.train.id,opts)
+%%
 
 % All tested parametric identification options using OL data, using prediction focus
         disp('Open Loop identification using an initial system: in progress')
@@ -345,6 +368,7 @@ figure(baseFig_sim+301);clf
             simpleBodephase(sysID.par.straight.sim.OL.raw  ,'Hz',lw,bodeRange,'wrap');grid minor
             simpleBodephase(G(1,1)                   ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
                 legend('InitSysIdent','Fixed order','First order approx','Straight data','Model','location','best')
+    print('./_Figures/OL/parTime/compareBodeAll_raw_1','-depsc')
 
 figure(baseFig_sim+302);clf
     set(gcf,'position',[500 100 700 450])
@@ -363,6 +387,7 @@ figure(baseFig_sim+302);clf
             simpleBodephase(sysID.par.straight.sim.OL.filt  ,'Hz',lw,bodeRange,'wrap');grid minor
             simpleBodephase(G(1,1)                    ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
                 legend('InitSysIdent','Fixed order','First order approx','Straight data','Model','location','best')
+    print('./_Figures/OL/parTime/compareBodeAll_filt_1','-depsc')
 
 % figure(baseFig_sim+303);clf
 %     set(gcf,'position',[100 60 1200 800])
@@ -475,16 +500,17 @@ figure(baseFig_sim+304);clf
             simpleBodephase(G(1,1)                  ,'Hz',lw,'g--',bodeRange,'wrap');grid minor
             xlim([bodeRange(1) bodeRange(end)])
                 legend('Using raw data','Using filtered data','location','best')
+    print('./_Figures/OL/parTime/compBodeAll_1','-depsc')
 
 %% Validate and compare the identifications in time domain, using x-step ahead prediction and a residual test
 
 % Choose which dataset to use for the validation
-    % dataSet = sysID.data.OL.train.id;
-    dataSet = sysID.data.OL.val.id;
+    dataSet = sysID.data.OL.train.id;
+    % dataSet = sysID.data.OL.val.id;
     % dataSet = sysID.data.OL.trans.id;
     
-    % dataSet_filt = sysID.dataFilt.OL.train.id;
-    dataSet_filt = sysID.dataFilt.OL.val.id;
+    dataSet_filt = sysID.dataFilt.OL.train.id;
+    % dataSet_filt = sysID.dataFilt.OL.val.id;
     % dataSet_filt = sysID.dataFilt.OL.trans.id;
 
 % Choose the amount of steps to use for the prediction (inf=simulation)
@@ -492,9 +518,11 @@ figure(baseFig_sim+304);clf
     xStep = inf;
 
 % Run the predictions and plot them
+    % test = initializedVal_OL(sysID.par.straight.sim.OL.raw,sysID.data.OL.train.id);
     OLsim_sysID_predTests_V3
 
 % Run the residual tests and plot them
+    % initializedVal_OL(sysID.par.straight.sim.OL.raw,sysID.data.OL.train.id)
     OLsim_sysID_resTests_V3
 
 

@@ -1,4 +1,4 @@
-function [H,coherence] = makeOpenLoopFRF_sysIdent(output,disturbance,fs)
+function [H,coherence] = makeOpenLoopFRF(output,disturbance,fs)
 
     Ts = 1/fs;
     nfft = ceil(length(output)/5);

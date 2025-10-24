@@ -1,7 +1,14 @@
-clc
+%——————————————————————————————————————————————————————————————————————————————————————
+% ███╗   ███╗ █████╗ ██╗  ██╗███████╗     ███╗   ███╗ ██████╗ ██████╗ ███████╗██╗     
+% ████╗ ████║██╔══██╗██║ ██╔╝██╔════╝     ████╗ ████║██╔═══██╗██╔══██╗██╔════╝██║     
+% ██╔████╔██║██║  ██║█████╔╝ ███████╗     ██╔████╔██║██║   ██║██║  ██║███████╗██║     
+% ██║╚██╔╝██║███████║██╔═██╗ ██╔════╝     ██║╚██╔╝██║██║   ██║██║  ██║██╔════╝██║     
+% ██║ ╚═╝ ██║██╔══██║██║  ██╗███████╗     ██║ ╚═╝ ██║╚██████╔╝██████╔╝███████╗███████╗
+% ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝     ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝╚══════╝
+%——————————————————————————————————————————————————————————————————————————————————————
 
-addpath(genpath("..\Consts\"))
-addpath(genpath(".\Funcs\"))
+addpath(genpath(".\Consts\"))
+addpath(genpath(".\LumpedModel_250924\Funcs\"))
 
 %% User definitions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -40,16 +47,17 @@ addpath(genpath(".\Funcs\"))
     inputAmp = 40; % Input amplitude (Watt)
 
 % Make and simulate controller?
-    makeController = false;
-    bwController   = 0.0025;
+    makeController = true;
+    bwController   = 0.001;
     saveController = false;
 
 % Define the (constant) water flow
     waterVelocity = 0; %[ml/s]
     % waterVelocity = ureal('waterVel',0.5,'PlusMinus',[-0.5 0.5]); %[ml/s]
+    % waterVelocity = ureal('waterVel',2.5,'PlusMinus',[-2.5 2.5]); %[ml/s]
 
 % Make LFR repesentation
-    makeLFR = true; %[true/false]
+    makeLFR = false; %[true/false]
 
 %%%%%%%% Normally, no changes past this point are needed %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -107,9 +115,7 @@ end
     % The system can also be written as a 'standard' state space system,
     % using the inverse of E
 
-    % sysTMC = dss(-L,B_heaters,C,0,E);
     sysTMC = ss(inv(E)*-L,inv(E)*B_heaters,C,0);
-    % sysTMC_w = ss(inv(E)*-L,inv(E)*B_heaters,C,0);
 
 % Some basic analysis of the system (bode plots, obsv, ctrb)
     % This script can be expanded in the future
@@ -117,9 +123,7 @@ end
 
 %% System similation initialization
 % Define the desired time vector for the simulation
-    % tVec = 0:10:(4*3600);
     tVec = 0:10:(8*3600);
-    % inputAmp = 40.*(sin(0.001*tVec)+1);
 
 % Different input signal options
     switch inputOpt
@@ -148,18 +152,11 @@ end
 
 % Different frequently used initial condition options
     x0 = 21.7.*ones(Ny*Nlumps+29,1);
-    % x0 = 20.6.*ones(Ny*Nlumps+1,1);
-    % x0 = 20.*ones(Ny*Nlumps+1,1);
-    % x0 = 94.5.*ones(Ny*Nlumps+29,1);
 
 % Different frequently used ambient temperature options
     Tamb = 21.7.*ones(length(u),1);
-    % Tamb = 20.6.*ones(length(u),1);
-    % Tamb = 20.*ones(length(u),1);
 
 % Different frequently used initial water temperature options
-    % Twat = 21.7.*ones(length(u),1);
-    % Twat = 20.6.*ones(length(u),1);
     Twat = 20.*ones(length(u),1);
 
 %% Linear system simulation
@@ -255,6 +252,7 @@ end
 % sanityChecks
 
 %% Make LFR repesentation
+% Define all the performance inputs to the LFR
 inputNames = {'HT1'};
 for i=2:(length(sysTMC.inputName)-2)
     inputNames = [inputNames, (['HT' num2str(i)])];
@@ -262,6 +260,7 @@ end
 inputNames = [inputNames, 'tempAmb', 'tempWater_in'];
 sysTMC.inputName = inputNames;
 
+% Define all the performance outptus to the LFR
 outputNames = {'Tmp1'};
 for i=2:(length(sysTMC.outputName))
     outputNames = [outputNames, (['Tmp' num2str(i)])];
@@ -269,11 +268,18 @@ end
 sysTMC.outputName = outputNames;
 
 if makeLFR
+    % Define the plant of which the LFR is made
     G = sysTMC;
 
+    % The reference sum
     refSum_P = sumblk('tempErr = tempRef - Tmp32');
 
+    % Make the LFR using the previously defined in- and output names in
+    % comibnation to some standard ones
     P = connect(G,refSum_P,{'tempRef','tempAmb','tempWater_in',inputNames{1:5}},{outputNames{1:end},inputNames{1:5},'tempErr'});
+
+    % Define how many control in- and outputs are in the system for
+    % possible controller synthesis
     Pnu = 5;
     Pny = 1;
 
@@ -300,8 +306,8 @@ contSys.InputName =  {'W','Tamb'};
 contSys.OutputName = 'T';
 
 if makeController
-% Generate a PID controller for a user selected bandwidth
-    Ck = genPID(d2c(contSys(1,1)),bwController);
+% Generate a PD controller for a user selected bandwidth
+    Ck = genPD(d2c(contSys(1,1)),bwController);
     Ck.tot.InputName =  'Terr';
     Ck.tot.OutputName = 'W';
     
